@@ -1,10 +1,40 @@
-import React from 'react';
-import { CheckCircle2, AlertTriangle, Edit2, ArrowRight, ArrowLeft } from 'lucide-react';
+import React, { useState } from 'react';
+import { CheckCircle2, AlertTriangle, Edit2, ArrowRight, ArrowLeft, Save, X } from 'lucide-react';
 import { PipelineBar } from '../components/PipelineBar';
 import { mockRequest, formatCurrency } from '../data/mockData';
 import { showToast } from '../components/Toast';
 
 export const ParsedScope: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
+  const [needsReview, setNeedsReview] = useState(mockRequest.needsReview);
+  const [assumptions, setAssumptions] = useState(mockRequest.assumptions);
+
+  const [editingAssumptionId, setEditingAssumptionId] = useState<string | null>(null);
+  const [editAssumptionText, setEditAssumptionText] = useState('');
+
+  const handleResolveReview = (id: string) => {
+    setNeedsReview(prev => prev.filter(item => item.id !== id));
+    showToast('Review item resolved');
+  };
+
+  const startEditAssumption = (id: string, text: string) => {
+    setEditingAssumptionId(id);
+    setEditAssumptionText(text);
+  };
+
+  const saveAssumption = (id: string) => {
+    if (!editAssumptionText.trim()) return;
+    setAssumptions(prev => prev.map(item => 
+      item.id === id ? { ...item, text: editAssumptionText } : item
+    ));
+    setEditingAssumptionId(null);
+    showToast('Assumption updated');
+  };
+
+  const cancelEditAssumption = () => {
+    setEditingAssumptionId(null);
+    setEditAssumptionText('');
+  };
+
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
@@ -20,8 +50,8 @@ export const ParsedScope: React.FC<{ onNavigate: (screen: string) => void }> = (
         <div className="px-6 py-4 border-b border-gray-100 bg-[#F1F3F5] flex justify-between items-center">
           <h2 className="text-sm font-semibold text-[#1A1D23] uppercase tracking-wider">Structured Scope</h2>
           <button 
-            onClick={() => showToast('Edit Scope coming soon')}
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center transition-colors"
+            onClick={() => onNavigate('command')}
+            className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
           >
             <Edit2 className="w-4 h-4 mr-1" /> Edit Scope
           </button>
@@ -86,20 +116,59 @@ export const ParsedScope: React.FC<{ onNavigate: (screen: string) => void }> = (
             </span>
           </div>
           <ul className="space-y-3">
-            {mockRequest.assumptions.map(assumption => (
+            {assumptions.map(assumption => (
               <li key={assumption.id} className="flex items-start justify-between text-sm text-gray-700 bg-white p-3 rounded-md border border-amber-50 shadow-xs">
-                <span className="flex items-center">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 mr-2"></span>
-                  {assumption.text}
-                </span>
-                <button 
-                  onClick={() => showToast('Edit Assumption coming soon')}
-                  className="text-blue-600 hover:text-blue-800 text-xs font-medium transition-colors"
-                >
-                  Edit
-                </button>
+                {editingAssumptionId === assumption.id ? (
+                  <div className="flex-1 mr-4">
+                    <input
+                      type="text"
+                      value={editAssumptionText}
+                      onChange={(e) => setEditAssumptionText(e.target.value)}
+                      className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') saveAssumption(assumption.id);
+                        if (e.key === 'Escape') cancelEditAssumption();
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <span className="flex items-center">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 mr-2"></span>
+                    {assumption.text}
+                  </span>
+                )}
+                
+                {editingAssumptionId === assumption.id ? (
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => saveAssumption(assumption.id)}
+                      className="text-green-600 hover:text-green-800 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 rounded p-1"
+                      title="Save"
+                    >
+                      <Save className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={cancelEditAssumption}
+                      className="text-gray-400 hover:text-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 rounded p-1"
+                      title="Cancel"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button 
+                    onClick={() => startEditAssumption(assumption.id, assumption.text)}
+                    className="text-blue-600 hover:text-blue-800 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-1"
+                  >
+                    Edit
+                  </button>
+                )}
               </li>
             ))}
+            {assumptions.length === 0 && (
+              <li className="text-sm text-gray-500 italic">No assumptions.</li>
+            )}
           </ul>
         </div>
 
@@ -108,25 +177,32 @@ export const ParsedScope: React.FC<{ onNavigate: (screen: string) => void }> = (
             <h3 className="text-sm font-semibold text-[#1A1D23] uppercase tracking-wider flex items-center">
               <AlertTriangle className="w-4 h-4 text-amber-500 mr-2" /> Needs Review
             </h3>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-              ⚠ 1 item
-            </span>
+            {needsReview.length > 0 && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                ⚠ {needsReview.length} item{needsReview.length !== 1 ? 's' : ''}
+              </span>
+            )}
           </div>
           <ul className="space-y-3">
-            {mockRequest.needsReview.map(item => (
+            {needsReview.map(item => (
               <li key={item.id} className="flex items-start justify-between text-sm text-gray-700 bg-white p-3 rounded-md border border-red-50 shadow-xs">
                 <span className="flex items-center">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-400 mr-2"></span>
                   {item.text}
                 </span>
                 <button 
-                  onClick={() => showToast('Resolve Review coming soon')}
-                  className="px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-medium rounded-md transition-colors"
+                  onClick={() => handleResolveReview(item.id)}
+                  className="px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500"
                 >
                   Resolve
                 </button>
               </li>
             ))}
+            {needsReview.length === 0 && (
+              <li className="text-sm text-green-600 flex items-center bg-green-50 p-3 rounded-md border border-green-100">
+                <CheckCircle2 className="w-4 h-4 mr-2" /> All review items resolved.
+              </li>
+            )}
           </ul>
         </div>
       </div>
@@ -134,13 +210,13 @@ export const ParsedScope: React.FC<{ onNavigate: (screen: string) => void }> = (
       <div className="flex justify-between items-center pt-6 border-t border-gray-200">
         <button 
           onClick={() => onNavigate('command')}
-          className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm transition-colors"
+          className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 rounded"
         >
           <ArrowLeft className="w-4 h-4 mr-2" /> Edit Request
         </button>
         <button 
           onClick={() => onNavigate('discovery')}
-          className="flex items-center px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-md shadow-sm transition-colors"
+          className="flex items-center px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
           Proceed to Discovery <ArrowRight className="w-4 h-4 ml-2" />
         </button>

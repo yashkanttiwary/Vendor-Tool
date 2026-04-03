@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, Download, Edit2, FileText, CheckSquare, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Download, Edit2, FileText, CheckSquare, ShieldAlert, CheckCircle2, Save, X } from 'lucide-react';
 import { PipelineBar, PipelineState } from '../components/PipelineBar';
 import { mockRequest } from '../data/mockData';
 import { showToast } from '../components/Toast';
@@ -17,6 +17,25 @@ export const StudioOutput: React.FC<{ onNavigate: (screen: string) => void }> = 
     }
     return Array(6).fill(false);
   });
+
+  const [isEditingBrief, setIsEditingBrief] = useState(false);
+  const [briefContent, setBriefContent] = useState(`Project Overview
+Vendor: Sharma Furniture Co.
+Location: Lucknow Center
+Timeline: 2 weeks from PO issuance
+
+Deliverables
+- 500 units of standard office chairs
+- Delivery and unboxing at Lucknow center
+- Removal of all packaging materials
+
+Acceptance Criteria
+- All chairs must be free of defects, scratches, or tears.
+- Hydraulic lift mechanisms must be tested and functional.
+- Delivery must be completed within the agreed 14-day window.
+
+Payment Terms
+50% advance upon PO issuance, 50% upon successful delivery and inspection.`);
 
   useEffect(() => {
     localStorage.setItem('deliveryChecklist', JSON.stringify(checklist));
@@ -39,6 +58,19 @@ export const StudioOutput: React.FC<{ onNavigate: (screen: string) => void }> = 
     if (stateToScreenMap[state]) {
       onNavigate(stateToScreenMap[state]);
     }
+  };
+
+  const handleSaveBrief = () => {
+    setIsEditingBrief(false);
+    showToast('Brief saved successfully');
+  };
+
+  const handleDownloadPDF = () => {
+    showToast('Downloading PDF...');
+    // Simulate download delay
+    setTimeout(() => {
+      showToast('Download complete');
+    }, 1500);
   };
 
   return (
@@ -64,42 +96,51 @@ export const StudioOutput: React.FC<{ onNavigate: (screen: string) => void }> = 
                 AI-Generated
               </span>
             </div>
-            <div className="p-6 prose prose-sm max-w-none text-gray-700">
-              <h3 className="text-lg font-bold text-[#1A1D23] mb-4">Project Overview</h3>
-              <p><strong>Vendor:</strong> Sharma Furniture Co.</p>
-              <p><strong>Location:</strong> Lucknow Center</p>
-              <p><strong>Timeline:</strong> 2 weeks from PO issuance</p>
-              
-              <h3 className="text-lg font-bold text-[#1A1D23] mt-6 mb-4">Deliverables</h3>
-              <ul>
-                <li>500 units of standard office chairs</li>
-                <li>Delivery and unboxing at Lucknow center</li>
-                <li>Removal of all packaging materials</li>
-              </ul>
-              
-              <h3 className="text-lg font-bold text-[#1A1D23] mt-6 mb-4">Acceptance Criteria</h3>
-              <ul>
-                <li>All chairs must be free of defects, scratches, or tears.</li>
-                <li>Hydraulic lift mechanisms must be tested and functional.</li>
-                <li>Delivery must be completed within the agreed 14-day window.</li>
-              </ul>
-              
-              <h3 className="text-lg font-bold text-[#1A1D23] mt-6 mb-4">Payment Terms</h3>
-              <p>50% advance upon PO issuance, 50% upon successful delivery and inspection.</p>
+            <div className="p-6">
+              {isEditingBrief ? (
+                <textarea
+                  value={briefContent}
+                  onChange={(e) => setBriefContent(e.target.value)}
+                  className="w-full h-96 p-4 text-gray-700 font-mono text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+              ) : (
+                <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap font-mono">
+                  {briefContent}
+                </div>
+              )}
             </div>
             <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end space-x-3">
-              <button 
-                onClick={() => showToast('Edit Brief coming soon')}
-                className="flex items-center px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <Edit2 className="w-4 h-4 mr-2" /> Edit Brief
-              </button>
-              <button 
-                onClick={() => showToast('Download PDF coming soon')}
-                className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              >
-                <Download className="w-4 h-4 mr-2" /> Download PDF
-              </button>
+              {isEditingBrief ? (
+                <>
+                  <button 
+                    onClick={() => setIsEditingBrief(false)}
+                    className="flex items-center px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-gray-200"
+                  >
+                    <X className="w-4 h-4 mr-2" /> Cancel
+                  </button>
+                  <button 
+                    onClick={handleSaveBrief}
+                    className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  >
+                    <Save className="w-4 h-4 mr-2" /> Save Changes
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button 
+                    onClick={() => setIsEditingBrief(true)}
+                    className="flex items-center px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <Edit2 className="w-4 h-4 mr-2" /> Edit Brief
+                  </button>
+                  <button 
+                    onClick={handleDownloadPDF}
+                    className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  >
+                    <Download className="w-4 h-4 mr-2" /> Download PDF
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

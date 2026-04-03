@@ -1,10 +1,11 @@
 import React, { useState, useRef } from 'react';
-import { Package, Users, Calendar, PenTool, MonitorPlay, Printer, UploadCloud, ChevronDown, ChevronRight, File as FileIcon, X } from 'lucide-react';
+import { Package, Users, Calendar, PenTool, MonitorPlay, Printer, UploadCloud, ChevronDown, ChevronRight, File as FileIcon, X, CheckCircle2 } from 'lucide-react';
 import { sanitizeInput, isValidCity, isValidBudget, isValidTimeline } from '../utils/sanitize';
 
 export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
   const [input, setInput] = useState('');
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const [category, setCategory] = useState('');
   const [city, setCity] = useState('');
   const [budget, setBudget] = useState('');
   const [timeline, setTimeline] = useState('');
@@ -32,8 +33,8 @@ export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> 
     setError('');
     
     // Basic validation
-    if (!input.trim()) {
-      setError('Please describe your need.');
+    if (!input.trim() && !category && !city && !budget && !timeline) {
+      setError('Please describe your need or fill in the structured details.');
       return;
     }
     
@@ -56,12 +57,13 @@ export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> 
 
     // Sanitize inputs before proceeding
     const sanitizedInput = sanitizeInput(input);
+    const sanitizedCategory = sanitizeInput(category);
     const sanitizedCity = sanitizeInput(city);
     const sanitizedBudget = sanitizeInput(budget);
     const sanitizedTimeline = sanitizeInput(timeline);
 
     // In a real app, we would send these sanitized values to the backend
-    // console.log({ sanitizedInput, sanitizedCity, sanitizedBudget, sanitizedTimeline, selectedFile });
+    // console.log({ sanitizedInput, sanitizedCategory, sanitizedCity, sanitizedBudget, sanitizedTimeline, selectedFile });
 
     onNavigate('parsed');
   };
@@ -93,6 +95,13 @@ export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> 
     }
   };
 
+  const handleCategorySelect = (catId: string, catLabel: string) => {
+    setCategory(catLabel);
+    if (!input.includes(catLabel)) {
+      setInput(prev => prev ? `${prev} [${catLabel}]` : `Looking for ${catLabel}`);
+    }
+  };
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="mb-8">
@@ -119,9 +128,9 @@ export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> 
         <div className="flex justify-end">
           <button
             onClick={handleSubmit}
-            disabled={!input.trim()}
+            disabled={!input.trim() && !category && !city && !budget && !timeline}
             className={`px-6 py-2.5 rounded-md font-medium text-sm transition-colors flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-              input.trim() 
+              input.trim() || category || city || budget || timeline
                 ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-sm' 
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
             }`}
@@ -148,6 +157,20 @@ export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> 
         {isAdvancedOpen && (
           <div className="mt-4 p-6 bg-white rounded-lg border border-gray-200 shadow-sm animate-in fade-in slide-in-from-top-4 duration-200">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div>
+                <label htmlFor="category-input" className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Category</label>
+                <select
+                  id="category-input"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full p-3 bg-[#F8F9FA] border border-gray-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-colors"
+                >
+                  <option value="">Select a category</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.label}>{cat.label}</option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label htmlFor="city-input" className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">City</label>
                 <input 
@@ -181,7 +204,7 @@ export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> 
                   placeholder="e.g. 2 weeks" 
                 />
               </div>
-              <div>
+              <div className="md:col-span-2">
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Supporting Documents</label>
                 <input 
                   type="file" 
@@ -232,12 +255,20 @@ export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> 
           {categories.map((cat) => (
             <button
               key={cat.id}
-              className="flex items-center p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:border-blue-300 hover:bg-blue-50/50 transition-all text-left focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 group"
+              onClick={() => handleCategorySelect(cat.id, cat.label)}
+              className={`flex items-center p-4 border rounded-lg shadow-sm transition-all text-left focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 group ${
+                category === cat.label 
+                  ? 'bg-blue-50 border-blue-300 ring-1 ring-blue-500' 
+                  : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
+              }`}
             >
-              <div className="w-10 h-10 rounded-full bg-[#F8F9FA] group-hover:bg-white flex items-center justify-center mr-3 text-blue-600 transition-colors">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 transition-colors ${
+                category === cat.label ? 'bg-blue-100 text-blue-700' : 'bg-[#F8F9FA] group-hover:bg-white text-blue-600'
+              }`}>
                 <cat.icon className="w-5 h-5" />
               </div>
-              <span className="font-medium text-sm text-[#1A1D23]">{cat.label}</span>
+              <span className="font-medium text-sm text-[#1A1D23] flex-1">{cat.label}</span>
+              {category === cat.label && <CheckCircle2 className="w-4 h-4 text-blue-600" />}
             </button>
           ))}
         </div>

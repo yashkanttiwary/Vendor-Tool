@@ -3,10 +3,13 @@ import { Filter, ArrowUpDown, ChevronRight, ArrowLeft, ArrowRight, ShieldAlert, 
 import { PipelineBar } from '../components/PipelineBar';
 import { mockRequest, mockCandidates, formatCurrency } from '../data/mockData';
 import { showToast } from '../components/Toast';
+import { CandidateDetail } from './CandidateDetail';
 
 export const Discovery: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
   const [candidates, setCandidates] = useState(mockCandidates);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
 
   const handleShortlistToggle = (id: string) => {
     setCandidates(candidates.map(c => c.id === id ? { ...c, shortlisted: !c.shortlisted } : c));
@@ -30,7 +33,34 @@ export const Discovery: React.FC<{ onNavigate: (screen: string) => void }> = ({ 
     }
   };
 
-  const filteredCandidates = candidates.filter(candidate => 
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedCandidates = React.useMemo(() => {
+    let sortableCandidates = [...candidates];
+    if (sortConfig !== null) {
+      sortableCandidates.sort((a, b) => {
+        let aValue: any = a[sortConfig.key as keyof typeof a];
+        let bValue: any = b[sortConfig.key as keyof typeof b];
+        
+        if (aValue < bValue) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableCandidates;
+  }, [candidates, sortConfig]);
+
+  const filteredCandidates = sortedCandidates.filter(candidate => 
     candidate.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     candidate.source.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -71,7 +101,7 @@ export const Discovery: React.FC<{ onNavigate: (screen: string) => void }> = ({ 
               <Filter className="w-4 h-4 mr-1" /> Filter
             </button>
             <button 
-              onClick={() => showToast('Sort options coming soon')}
+              onClick={() => handleSort('score')}
               className="flex items-center text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-1"
             >
               <ArrowUpDown className="w-4 h-4 mr-1" /> Sort
@@ -84,12 +114,12 @@ export const Discovery: React.FC<{ onNavigate: (screen: string) => void }> = ({ 
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50 text-xs uppercase tracking-wider text-gray-500 font-medium">
                 <th className="px-6 py-3 w-12">#</th>
-                <th className="px-6 py-3">Name</th>
-                <th className="px-6 py-3">Score</th>
-                <th className="px-6 py-3">Quote</th>
-                <th className="px-6 py-3">Benchmark</th>
-                <th className="px-6 py-3">Risk</th>
-                <th className="px-6 py-3">Source</th>
+                <th className="px-6 py-3 cursor-pointer hover:text-gray-700" onClick={() => handleSort('name')}>Name {sortConfig?.key === 'name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                <th className="px-6 py-3 cursor-pointer hover:text-gray-700" onClick={() => handleSort('score')}>Score {sortConfig?.key === 'score' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                <th className="px-6 py-3 cursor-pointer hover:text-gray-700" onClick={() => handleSort('quote')}>Quote {sortConfig?.key === 'quote' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                <th className="px-6 py-3 cursor-pointer hover:text-gray-700" onClick={() => handleSort('benchmark')}>Benchmark {sortConfig?.key === 'benchmark' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                <th className="px-6 py-3 cursor-pointer hover:text-gray-700" onClick={() => handleSort('risk')}>Risk {sortConfig?.key === 'risk' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                <th className="px-6 py-3 cursor-pointer hover:text-gray-700" onClick={() => handleSort('source')}>Source {sortConfig?.key === 'source' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
                 <th className="px-6 py-3 text-right">Shortlist</th>
               </tr>
             </thead>
@@ -104,7 +134,7 @@ export const Discovery: React.FC<{ onNavigate: (screen: string) => void }> = ({ 
                     <td className="px-6 py-4">
                       <div 
                         className="font-medium text-[#1A1D23] flex items-center cursor-pointer hover:text-blue-600 transition-colors" 
-                        onClick={() => showToast('Candidate details coming soon')}
+                        onClick={() => setSelectedCandidateId(candidate.id)}
                       >
                         {candidate.name} <ChevronRight className="w-4 h-4 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
@@ -171,6 +201,10 @@ export const Discovery: React.FC<{ onNavigate: (screen: string) => void }> = ({ 
           Proceed to Negotiation <ArrowRight className="w-4 h-4 ml-2" />
         </button>
       </div>
+      
+      {selectedCandidateId && (
+        <CandidateDetail onClose={() => setSelectedCandidateId(null)} />
+      )}
     </div>
   );
 };
