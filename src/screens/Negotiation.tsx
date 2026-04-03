@@ -12,6 +12,20 @@ export const Negotiation: React.FC<{ onNavigate: (screen: string) => void }> = (
     showToast(`Proposal sent successfully via ${method}`);
   };
 
+  const handlePipelineNavigate = (state: string) => {
+    const stateToScreenMap: Record<string, string> = {
+      'parsed': 'parsed',
+      'discovering': 'discovery',
+      'shortlisted': 'discovery',
+      'negotiation_ready': 'negotiation',
+      'recommended': 'recommendation',
+      'awaiting_approval': 'approval',
+    };
+    if (stateToScreenMap[state]) {
+      onNavigate(stateToScreenMap[state]);
+    }
+  };
+
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
@@ -21,7 +35,7 @@ export const Negotiation: React.FC<{ onNavigate: (screen: string) => void }> = (
         </div>
       </div>
 
-      <PipelineBar currentState="negotiation_ready" onNavigate={() => {}} />
+      <PipelineBar currentState="negotiation_ready" onNavigate={handlePipelineNavigate} />
 
       <div className="bg-white rounded-lg border border-gray-100 shadow-xs mb-8 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 bg-[#F1F3F5] flex justify-between items-center">

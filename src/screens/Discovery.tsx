@@ -65,6 +65,20 @@ export const Discovery: React.FC<{ onNavigate: (screen: string) => void }> = ({ 
     candidate.source.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handlePipelineNavigate = (state: string) => {
+    const stateToScreenMap: Record<string, string> = {
+      'parsed': 'parsed',
+      'discovering': 'discovery',
+      'shortlisted': 'discovery',
+      'negotiation_ready': 'negotiation',
+      'recommended': 'recommendation',
+      'awaiting_approval': 'approval',
+    };
+    if (stateToScreenMap[state]) {
+      onNavigate(stateToScreenMap[state]);
+    }
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
@@ -74,7 +88,7 @@ export const Discovery: React.FC<{ onNavigate: (screen: string) => void }> = ({ 
         </div>
       </div>
 
-      <PipelineBar currentState="shortlisted" onNavigate={() => {}} />
+      <PipelineBar currentState="shortlisted" onNavigate={handlePipelineNavigate} />
 
       <div className="bg-white rounded-lg border border-gray-100 shadow-xs overflow-hidden mb-8">
         <div className="px-6 py-4 border-b border-gray-100 bg-[#F1F3F5] flex justify-between items-center">

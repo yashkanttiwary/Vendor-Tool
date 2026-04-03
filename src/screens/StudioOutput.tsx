@@ -1,22 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ArrowLeft, ArrowRight, Download, Edit2, FileText, CheckSquare, ShieldAlert, CheckCircle2, Save, X } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 import { PipelineBar, PipelineState } from '../components/PipelineBar';
 import { mockRequest } from '../data/mockData';
 import { showToast } from '../components/Toast';
+import { useLocalStorage } from '../utils/useLocalStorage';
 
 export const StudioOutput: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
   // M-1: Delivery Checklist Persistence
-  const [checklist, setChecklist] = useState<boolean[]>(() => {
-    const saved = localStorage.getItem('deliveryChecklist');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return Array(6).fill(false);
-      }
-    }
-    return Array(6).fill(false);
-  });
+  const [checklist, setChecklist] = useLocalStorage<boolean[]>('deliveryChecklist', Array(6).fill(false));
 
   const [isEditingBrief, setIsEditingBrief] = useState(false);
   const [briefContent, setBriefContent] = useState(`Project Overview
@@ -36,10 +28,6 @@ Acceptance Criteria
 
 Payment Terms
 50% advance upon PO issuance, 50% upon successful delivery and inspection.`);
-
-  useEffect(() => {
-    localStorage.setItem('deliveryChecklist', JSON.stringify(checklist));
-  }, [checklist]);
 
   const handleChecklistChange = (index: number) => {
     const newChecklist = [...checklist];
@@ -66,11 +54,26 @@ Payment Terms
   };
 
   const handleDownloadPDF = () => {
-    showToast('Downloading PDF...');
-    // Simulate download delay
-    setTimeout(() => {
+    showToast('Generating PDF...');
+    try {
+      const doc = new jsPDF();
+      
+      // Add title
+      doc.setFontSize(16);
+      doc.text('Vendor Scope Document', 20, 20);
+      
+      // Add content
+      doc.setFontSize(12);
+      const splitText = doc.splitTextToSize(briefContent, 170);
+      doc.text(splitText, 20, 30);
+      
+      // Save the PDF
+      doc.save(`Vendor_Scope_Request_${mockRequest.id}.pdf`);
       showToast('Download complete');
-    }, 1500);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      showToast('Failed to generate PDF');
+    }
   };
 
   return (

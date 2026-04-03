@@ -4,7 +4,6 @@ import { sanitizeInput, isValidCity, isValidBudget, isValidTimeline } from '../u
 
 export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
   const [input, setInput] = useState('');
-  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const [category, setCategory] = useState('');
   const [city, setCity] = useState('');
   const [budget, setBudget] = useState('');
@@ -41,17 +40,14 @@ export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> 
     // Validate optional fields even if advanced is closed
     if (budget && !isValidBudget(budget)) {
       setError('Budget contains invalid characters or is too long. Please use numbers and currency symbols.');
-      setIsAdvancedOpen(true);
       return;
     }
     if (city && !isValidCity(city)) {
       setError('City contains invalid characters or is too long. Please use letters only.');
-      setIsAdvancedOpen(true);
       return;
     }
     if (timeline && !isValidTimeline(timeline)) {
       setError('Timeline contains invalid characters or is too long.');
-      setIsAdvancedOpen(true);
       return;
     }
 
@@ -141,22 +137,15 @@ export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> 
       </div>
 
       <div className="mb-8">
-        <button 
-          onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
-          className="flex items-center justify-between w-full text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors bg-white border border-gray-200 shadow-sm px-6 py-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <span className="flex items-center">
-            <span className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mr-3">
-              +
-            </span>
-            Add Structured Details (Category, City, Budget, Upload)
+        <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center">
+          <span className="w-6 h-6 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mr-2 text-xs">
+            +
           </span>
-          <ChevronDown className={`w-5 h-5 transition-transform ${isAdvancedOpen ? 'rotate-180' : ''}`} />
-        </button>
+          Optional Structured Details
+        </h3>
         
-        {isAdvancedOpen && (
-          <div className="mt-4 p-6 bg-white rounded-lg border border-gray-200 shadow-sm animate-in fade-in slide-in-from-top-4 duration-200">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="p-6 bg-white rounded-lg border border-gray-200 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
                 <label htmlFor="category-input" className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Category</label>
                 <select
@@ -244,9 +233,8 @@ export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> 
                   </div>
                 )}
               </div>
-            </div>
           </div>
-        )}
+        </div>
       </div>
 
       <div className="mb-8">

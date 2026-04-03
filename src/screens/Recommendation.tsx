@@ -5,6 +5,20 @@ import { mockRequest, formatCurrency } from '../data/mockData';
 import { showToast } from '../components/Toast';
 
 export const Recommendation: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
+  const handlePipelineNavigate = (state: string) => {
+    const stateToScreenMap: Record<string, string> = {
+      'parsed': 'parsed',
+      'discovering': 'discovery',
+      'shortlisted': 'discovery',
+      'negotiation_ready': 'negotiation',
+      'recommended': 'recommendation',
+      'awaiting_approval': 'approval',
+    };
+    if (stateToScreenMap[state]) {
+      onNavigate(stateToScreenMap[state]);
+    }
+  };
+
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
@@ -14,7 +28,7 @@ export const Recommendation: React.FC<{ onNavigate: (screen: string) => void }> 
         </div>
       </div>
 
-      <PipelineBar currentState="recommended" onNavigate={() => {}} />
+      <PipelineBar currentState="recommended" onNavigate={handlePipelineNavigate} />
 
       <div className="space-y-6 mb-8">
         {/* Top Pick */}

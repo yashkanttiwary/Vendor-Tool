@@ -1,8 +1,33 @@
-import React from 'react';
-import { Users, Building, Shield } from 'lucide-react';
+import React, { useState } from 'react';
+import { Users, Building, Shield, X, Mail } from 'lucide-react';
 import { showToast } from '../components/Toast';
 
 export const Organization: React.FC = () => {
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState('Viewer');
+  const [inviteDepartment, setInviteDepartment] = useState('Operations');
+
+  const handleInvite = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteEmail) {
+      showToast('Please enter an email address');
+      return;
+    }
+    
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(inviteEmail)) {
+      showToast('Please enter a valid email address');
+      return;
+    }
+
+    // Simulate API call
+    showToast(`Invitation sent to ${inviteEmail}`);
+    setIsInviteModalOpen(false);
+    setInviteEmail('');
+  };
+
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <div className="mb-8">
@@ -14,8 +39,8 @@ export const Organization: React.FC = () => {
         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-lg font-bold text-[#1A1D23]">Team Members</h2>
           <button 
-            onClick={() => showToast('Invite Member coming soon')}
-            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+            onClick={() => setIsInviteModalOpen(true)}
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
             Invite Member
           </button>
@@ -54,6 +79,89 @@ export const Organization: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {isInviteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-6 border-b border-gray-100">
+              <h3 className="text-lg font-bold text-[#1A1D23]">Invite New Member</h3>
+              <button 
+                onClick={() => setIsInviteModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleInvite} className="p-6 space-y-4">
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Mail className="h-4 w-4 text-gray-400" />
+                  </div>
+                  <input
+                    type="email"
+                    id="email"
+                    required
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    placeholder="colleague@example.com"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                <select
+                  id="role"
+                  value={inviteRole}
+                  onChange={(e) => setInviteRole(e.target.value)}
+                  className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                >
+                  <option>Admin</option>
+                  <option>Procurement Manager</option>
+                  <option>Finance Controller</option>
+                  <option>Operations Lead</option>
+                  <option>Viewer</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                <select
+                  id="department"
+                  value={inviteDepartment}
+                  onChange={(e) => setInviteDepartment(e.target.value)}
+                  className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                >
+                  <option>Finance</option>
+                  <option>Operations</option>
+                  <option>IT</option>
+                  <option>HR</option>
+                  <option>Marketing</option>
+                </select>
+              </div>
+
+              <div className="pt-4 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setIsInviteModalOpen(false)}
+                  className="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Send Invitation
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
