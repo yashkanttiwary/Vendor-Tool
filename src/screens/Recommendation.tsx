@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowLeft, ArrowRight, ShieldCheck, Shield, Award, TrendingDown, Info, Edit2 } from 'lucide-react';
 import { PipelineBar } from '../components/PipelineBar';
 import { mockRequest, formatCurrency } from '../data/mockData';
+import { showToast } from '../components/Toast';
 
 export const Recommendation: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
   return (
@@ -166,7 +167,10 @@ export const Recommendation: React.FC<{ onNavigate: (screen: string) => void }> 
             </li>
           </ul>
         </div>
-        <button className="flex items-center px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-md shadow-sm transition-colors">
+        <button 
+          onClick={() => showToast('Edit Recommendation coming soon')}
+          className="flex items-center px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-md shadow-sm transition-colors"
+        >
           <Edit2 className="w-4 h-4 mr-2" /> Edit Recommendation
         </button>
       </div>

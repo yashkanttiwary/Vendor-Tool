@@ -2,6 +2,7 @@ import React from 'react';
 import { CheckCircle2, AlertTriangle, Edit2, ArrowRight, ArrowLeft } from 'lucide-react';
 import { PipelineBar } from '../components/PipelineBar';
 import { mockRequest, formatCurrency } from '../data/mockData';
+import { showToast } from '../components/Toast';
 
 export const ParsedScope: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
   return (
@@ -18,7 +19,10 @@ export const ParsedScope: React.FC<{ onNavigate: (screen: string) => void }> = (
       <div className="bg-white rounded-lg border border-gray-100 shadow-xs mb-8 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 bg-[#F1F3F5] flex justify-between items-center">
           <h2 className="text-sm font-semibold text-[#1A1D23] uppercase tracking-wider">Structured Scope</h2>
-          <button className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center transition-colors">
+          <button 
+            onClick={() => showToast('Edit Scope coming soon')}
+            className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center transition-colors"
+          >
             <Edit2 className="w-4 h-4 mr-1" /> Edit Scope
           </button>
         </div>
@@ -88,7 +92,12 @@ export const ParsedScope: React.FC<{ onNavigate: (screen: string) => void }> = (
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400 mr-2"></span>
                   {assumption.text}
                 </span>
-                <button className="text-blue-600 hover:text-blue-800 text-xs font-medium transition-colors">Edit</button>
+                <button 
+                  onClick={() => showToast('Edit Assumption coming soon')}
+                  className="text-blue-600 hover:text-blue-800 text-xs font-medium transition-colors"
+                >
+                  Edit
+                </button>
               </li>
             ))}
           </ul>
@@ -110,7 +119,12 @@ export const ParsedScope: React.FC<{ onNavigate: (screen: string) => void }> = (
                   <span className="w-1.5 h-1.5 rounded-full bg-red-400 mr-2"></span>
                   {item.text}
                 </span>
-                <button className="px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-medium rounded-md transition-colors">Resolve</button>
+                <button 
+                  onClick={() => showToast('Resolve Review coming soon')}
+                  className="px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-medium rounded-md transition-colors"
+                >
+                  Resolve
+                </button>
               </li>
             ))}
           </ul>
@@ -119,7 +133,7 @@ export const ParsedScope: React.FC<{ onNavigate: (screen: string) => void }> = (
 
       <div className="flex justify-between items-center pt-6 border-t border-gray-200">
         <button 
-          onClick={() => onNavigate('command_console')}
+          onClick={() => onNavigate('command')}
           className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm transition-colors"
         >
           <ArrowLeft className="w-4 h-4 mr-2" /> Edit Request

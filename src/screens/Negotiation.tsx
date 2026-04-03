@@ -1,9 +1,17 @@
-import React from 'react';
-import { ArrowLeft, ArrowRight, MessageSquare, Mail, TrendingDown, Info } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, ArrowRight, MessageSquare, Mail, TrendingDown, Info, CheckCircle2 } from 'lucide-react';
 import { PipelineBar } from '../components/PipelineBar';
 import { mockRequest, formatCurrency } from '../data/mockData';
+import { showToast } from '../components/Toast';
 
 export const Negotiation: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
+  const [proposalSent, setProposalSent] = useState(false);
+
+  const handleSendProposal = (method: string) => {
+    setProposalSent(true);
+    showToast(`Proposal sent successfully via ${method}`);
+  };
+
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
@@ -130,13 +138,24 @@ export const Negotiation: React.FC<{ onNavigate: (screen: string) => void }> = (
                 </p>
                 
                 <div className="mt-4 pt-4 border-t border-gray-100 flex space-x-3">
-                  <button className="flex-1 flex justify-center items-center px-4 py-2 bg-[#25D366] hover:bg-[#128C7E] text-white text-sm font-medium rounded-md transition-colors shadow-sm">
-                    <MessageSquare className="w-4 h-4 mr-2" /> WhatsApp Draft
+                  <button 
+                    onClick={() => handleSendProposal('WhatsApp')}
+                    className="flex-1 flex justify-center items-center px-4 py-2 bg-[#25D366] hover:bg-[#128C7E] text-white text-sm font-medium rounded-md transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-[#25D366] focus:ring-offset-2"
+                  >
+                    <MessageSquare className="w-4 h-4 mr-2" /> Send Proposal
                   </button>
-                  <button className="flex-1 flex justify-center items-center px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-md transition-colors shadow-sm">
-                    <Mail className="w-4 h-4 mr-2" /> Email Draft
+                  <button 
+                    onClick={() => handleSendProposal('Email')}
+                    className="flex-1 flex justify-center items-center px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-md transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <Mail className="w-4 h-4 mr-2" /> Send Proposal
                   </button>
                 </div>
+                {proposalSent && (
+                  <div className="mt-3 flex items-center text-sm text-green-600 bg-green-50 p-2 rounded border border-green-100">
+                    <CheckCircle2 className="w-4 h-4 mr-1.5" /> Proposal sent successfully!
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -146,13 +165,13 @@ export const Negotiation: React.FC<{ onNavigate: (screen: string) => void }> = (
       <div className="flex justify-between items-center pt-6 border-t border-gray-200">
         <button 
           onClick={() => onNavigate('discovery')}
-          className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm transition-colors"
+          className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 rounded"
         >
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Shortlist
         </button>
         <button 
           onClick={() => onNavigate('recommendation')}
-          className="flex items-center px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-md shadow-sm transition-colors"
+          className="flex items-center px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
           Proceed to Recommendation <ArrowRight className="w-4 h-4 ml-2" />
         </button>

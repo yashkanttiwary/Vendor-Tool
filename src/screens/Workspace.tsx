@@ -1,6 +1,7 @@
 import React from 'react';
 import { TrendingUp, ArrowUpRight, CheckCircle2, Clock } from 'lucide-react';
 import { formatCurrency } from '../data/mockData';
+import { showToast } from '../components/Toast';
 
 export const Workspace: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
   return (
@@ -56,7 +57,7 @@ export const Workspace: React.FC<{ onNavigate: (screen: string) => void }> = ({ 
         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-[#F1F3F5]">
           <h2 className="text-sm font-semibold text-[#1A1D23] uppercase tracking-wider">Active Requests</h2>
           <button 
-            onClick={() => onNavigate('command_console')}
+            onClick={() => onNavigate('command')}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors"
           >
             New Request
@@ -77,7 +78,7 @@ export const Workspace: React.FC<{ onNavigate: (screen: string) => void }> = ({ 
             <tbody className="text-sm">
               <tr 
                 className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors"
-                onClick={() => onNavigate('parsed_scope')}
+                onClick={() => onNavigate('parsed')}
               >
                 <td className="px-6 py-4 font-mono text-[#1A1D23]">GU-0142</td>
                 <td className="px-6 py-4 text-gray-700">Vendor Procurement</td>
@@ -90,7 +91,10 @@ export const Workspace: React.FC<{ onNavigate: (screen: string) => void }> = ({ 
                 <td className="px-6 py-4 font-mono text-[#1A1D23]">{formatCurrency(240000)}</td>
                 <td className="px-6 py-4 text-gray-500 font-mono text-xs">2h ago</td>
               </tr>
-              <tr className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors">
+              <tr 
+                className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors"
+                onClick={() => showToast('Request details coming soon')}
+              >
                 <td className="px-6 py-4 font-mono text-[#1A1D23]">GU-0139</td>
                 <td className="px-6 py-4 text-gray-700">Influencer Sourcing</td>
                 <td className="px-6 py-4">
@@ -102,7 +106,10 @@ export const Workspace: React.FC<{ onNavigate: (screen: string) => void }> = ({ 
                 <td className="px-6 py-4 font-mono text-[#1A1D23]">{formatCurrency(180000)}</td>
                 <td className="px-6 py-4 text-gray-500 font-mono text-xs">5h ago</td>
               </tr>
-              <tr className="hover:bg-gray-50 cursor-pointer transition-colors">
+              <tr 
+                className="hover:bg-gray-50 cursor-pointer transition-colors"
+                onClick={() => showToast('Request details coming soon')}
+              >
                 <td className="px-6 py-4 font-mono text-[#1A1D23]">GU-0135</td>
                 <td className="px-6 py-4 text-gray-700">Event Sourcing</td>
                 <td className="px-6 py-4">

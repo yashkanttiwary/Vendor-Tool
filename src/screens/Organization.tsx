@@ -1,5 +1,6 @@
 import React from 'react';
 import { Users, Building, Shield } from 'lucide-react';
+import { showToast } from '../components/Toast';
 
 export const Organization: React.FC = () => {
   return (
@@ -12,7 +13,10 @@ export const Organization: React.FC = () => {
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-lg font-bold text-[#1A1D23]">Team Members</h2>
-          <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">
+          <button 
+            onClick={() => showToast('Invite Member coming soon')}
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+          >
             Invite Member
           </button>
         </div>

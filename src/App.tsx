@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Sidebar } from './components/Sidebar';
+import { Toast } from './components/Toast';
 import { Workspace } from './screens/Workspace';
 import { CommandConsole } from './screens/CommandConsole';
 import { ParsedScope } from './screens/ParsedScope';
@@ -37,6 +38,7 @@ export default function App() {
         {currentScreen === 'studio' && <StudioOutput onNavigate={handleNavigate} />}
         {currentScreen === 'approval' && <Approval onNavigate={handleNavigate} />}
       </main>
+      <Toast />
     </div>
   );
 }

@@ -33,7 +33,7 @@ export const PipelineBar: React.FC<PipelineBarProps> = ({ currentState, onNaviga
               <button
                 onClick={() => isCompleted ? onNavigate(stage.id as PipelineState) : null}
                 disabled={!isCompleted && !isActive}
-                className={`flex items-center space-x-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                className={`flex items-center space-x-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
                   isCompleted ? 'text-green-600 hover:bg-green-50 cursor-pointer' :
                   isActive ? 'bg-blue-50 text-blue-600 cursor-default' :
                   'text-gray-400 cursor-not-allowed'

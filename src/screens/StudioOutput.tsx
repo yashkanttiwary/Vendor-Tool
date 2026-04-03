@@ -1,9 +1,46 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, Download, Edit2, FileText, CheckSquare, ShieldAlert, CheckCircle2 } from 'lucide-react';
-import { PipelineBar } from '../components/PipelineBar';
+import { PipelineBar, PipelineState } from '../components/PipelineBar';
 import { mockRequest } from '../data/mockData';
+import { showToast } from '../components/Toast';
 
 export const StudioOutput: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
+  // M-1: Delivery Checklist Persistence
+  const [checklist, setChecklist] = useState<boolean[]>(() => {
+    const saved = localStorage.getItem('deliveryChecklist');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return Array(6).fill(false);
+      }
+    }
+    return Array(6).fill(false);
+  });
+
+  useEffect(() => {
+    localStorage.setItem('deliveryChecklist', JSON.stringify(checklist));
+  }, [checklist]);
+
+  const handleChecklistChange = (index: number) => {
+    const newChecklist = [...checklist];
+    newChecklist[index] = !newChecklist[index];
+    setChecklist(newChecklist);
+  };
+
+  const handlePipelineNavigate = (state: PipelineState) => {
+    const stateToScreenMap: Record<string, string> = {
+      'parsed': 'parsed',
+      'discovering': 'discovery',
+      'negotiation_ready': 'negotiation',
+      'recommended': 'recommendation',
+      'awaiting_approval': 'approval',
+    };
+    if (stateToScreenMap[state]) {
+      onNavigate(stateToScreenMap[state]);
+    }
+  };
+
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
@@ -13,7 +50,7 @@ export const StudioOutput: React.FC<{ onNavigate: (screen: string) => void }> = 
         </div>
       </div>
 
-      <PipelineBar currentState="recommended" onNavigate={() => {}} />
+      <PipelineBar currentState="recommended" onNavigate={handlePipelineNavigate} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div className="lg:col-span-2 space-y-6">
@@ -51,10 +88,16 @@ export const StudioOutput: React.FC<{ onNavigate: (screen: string) => void }> = 
               <p>50% advance upon PO issuance, 50% upon successful delivery and inspection.</p>
             </div>
             <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end space-x-3">
-              <button className="flex items-center px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-md shadow-sm transition-colors">
+              <button 
+                onClick={() => showToast('Edit Brief coming soon')}
+                className="flex items-center px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
                 <Edit2 className="w-4 h-4 mr-2" /> Edit Brief
               </button>
-              <button className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md shadow-sm transition-colors">
+              <button 
+                onClick={() => showToast('Download PDF coming soon')}
+                className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              >
                 <Download className="w-4 h-4 mr-2" /> Download PDF
               </button>
             </div>
@@ -78,8 +121,14 @@ export const StudioOutput: React.FC<{ onNavigate: (screen: string) => void }> = 
                   "Process Final Payment"
                 ].map((item, i) => (
                   <li key={i} className="flex items-start">
-                    <input type="checkbox" className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-                    <span className="ml-2 text-sm text-gray-700">{item}</span>
+                    <input 
+                      type="checkbox" 
+                      id={`checklist-${i}`}
+                      checked={checklist[i]}
+                      onChange={() => handleChecklistChange(i)}
+                      className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer" 
+                    />
+                    <label htmlFor={`checklist-${i}`} className="ml-2 text-sm text-gray-700 cursor-pointer select-none">{item}</label>
                   </li>
                 ))}
               </ul>
@@ -121,13 +170,13 @@ export const StudioOutput: React.FC<{ onNavigate: (screen: string) => void }> = 
       <div className="flex justify-between items-center pt-6 border-t border-gray-200">
         <button 
           onClick={() => onNavigate('recommendation')}
-          className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm transition-colors"
+          className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md"
         >
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Recommendation
         </button>
         <button 
           onClick={() => onNavigate('approval')}
-          className="flex items-center px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-md shadow-sm transition-colors"
+          className="flex items-center px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
           Proceed to Approval <ArrowRight className="w-4 h-4 ml-2" />
         </button>

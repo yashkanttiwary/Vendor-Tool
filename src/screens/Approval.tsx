@@ -1,18 +1,49 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Check, X, RotateCcw, ShieldCheck, TrendingDown, Clock, User } from 'lucide-react';
-import { PipelineBar } from '../components/PipelineBar';
+import { PipelineBar, PipelineState } from '../components/PipelineBar';
 import { mockRequest, formatCurrency } from '../data/mockData';
+import { sanitizeInput } from '../utils/sanitize';
+import { useLocalStorage } from '../utils/useLocalStorage';
 
 export const Approval: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
-  const [auditNote, setAuditNote] = useState('');
+  const [auditNote, setAuditNote] = useLocalStorage('auditNote', '');
   const [isApproved, setIsApproved] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<'approve' | 'reject' | 'revise' | null>(null);
 
-  const handleApprove = () => {
-    if (!auditNote.trim()) {
+  const handleActionClick = (action: 'approve' | 'reject' | 'revise') => {
+    if (action === 'approve' && !auditNote.trim()) {
       alert("Audit note is required for approval.");
       return;
     }
-    setIsApproved(true);
+    setConfirmAction(action);
+  };
+
+  const executeAction = () => {
+    if (confirmAction === 'approve') {
+      const sanitizedNote = sanitizeInput(auditNote);
+      // In a real app, we would send sanitizedNote to the backend
+      // console.log("Approved with note:", sanitizedNote);
+      setIsApproved(true);
+      setAuditNote(''); // Clear note after successful approval
+    } else if (confirmAction === 'reject') {
+      onNavigate('workspace');
+    } else if (confirmAction === 'revise') {
+      onNavigate('recommendation');
+    }
+    setConfirmAction(null);
+  };
+
+  const handlePipelineNavigate = (state: PipelineState) => {
+    const stateToScreenMap: Record<string, string> = {
+      'parsed': 'parsed',
+      'discovering': 'discovery',
+      'negotiation_ready': 'negotiation',
+      'recommended': 'recommendation',
+      'awaiting_approval': 'approval',
+    };
+    if (stateToScreenMap[state]) {
+      onNavigate(stateToScreenMap[state]);
+    }
   };
 
   if (isApproved) {
@@ -27,7 +58,7 @@ export const Approval: React.FC<{ onNavigate: (screen: string) => void }> = ({ o
         </p>
         <button 
           onClick={() => onNavigate('workspace')}
-          className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-sm transition-colors"
+          className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
           Return to Workspace
         </button>
@@ -35,8 +66,12 @@ export const Approval: React.FC<{ onNavigate: (screen: string) => void }> = ({ o
     );
   }
 
+  const handleBack = () => {
+    onNavigate('studio');
+  };
+
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-6 max-w-4xl mx-auto relative">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[#1A1D23]">Approval Required</h1>
@@ -44,7 +79,7 @@ export const Approval: React.FC<{ onNavigate: (screen: string) => void }> = ({ o
         </div>
       </div>
 
-      <PipelineBar currentState="awaiting_approval" onNavigate={() => {}} />
+      <PipelineBar currentState="awaiting_approval" onNavigate={handlePipelineNavigate} />
 
       <div className="bg-white rounded-lg border border-gray-200 shadow-lg mb-8 overflow-hidden">
         <div className="p-8 border-b border-gray-100">
@@ -111,20 +146,26 @@ export const Approval: React.FC<{ onNavigate: (screen: string) => void }> = ({ o
             value={auditNote}
             onChange={(e) => setAuditNote(e.target.value)}
             placeholder="Add your review notes here. This will be permanently recorded in the audit trail..."
-            className="w-full min-h-[100px] p-4 bg-white border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors resize-y text-sm text-[#1A1D23] mb-8"
+            className="w-full min-h-[100px] p-4 bg-white border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors resize-y text-sm text-[#1A1D23] mb-8 outline-none"
           />
 
           <div className="grid grid-cols-3 gap-4">
             <button 
-              onClick={handleApprove}
-              className="flex items-center justify-center px-6 py-4 bg-[#22C55E] hover:bg-[#16A34A] text-white font-bold text-lg rounded-md shadow-sm transition-colors"
+              onClick={() => handleActionClick('approve')}
+              className="flex items-center justify-center px-6 py-4 bg-[#22C55E] hover:bg-[#16A34A] text-white font-bold text-lg rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
             >
               <Check className="w-6 h-6 mr-2" /> APPROVE
             </button>
-            <button className="flex items-center justify-center px-6 py-4 bg-white border-2 border-red-500 text-red-600 hover:bg-red-50 font-bold text-lg rounded-md transition-colors">
+            <button 
+              onClick={() => handleActionClick('reject')}
+              className="flex items-center justify-center px-6 py-4 bg-white border-2 border-red-500 text-red-600 hover:bg-red-50 font-bold text-lg rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+            >
               <X className="w-6 h-6 mr-2" /> REJECT
             </button>
-            <button className="flex items-center justify-center px-6 py-4 bg-white border-2 border-amber-500 text-amber-600 hover:bg-amber-50 font-bold text-lg rounded-md transition-colors">
+            <button 
+              onClick={() => handleActionClick('revise')}
+              className="flex items-center justify-center px-6 py-4 bg-white border-2 border-amber-500 text-amber-600 hover:bg-amber-50 font-bold text-lg rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+            >
               <RotateCcw className="w-6 h-6 mr-2" /> REVISE
             </button>
           </div>
@@ -142,12 +183,48 @@ export const Approval: React.FC<{ onNavigate: (screen: string) => void }> = ({ o
 
       <div className="flex justify-start pt-2">
         <button 
-          onClick={() => onNavigate('studio')}
-          className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm transition-colors"
+          onClick={handleBack}
+          className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md"
         >
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to STUDIO Output
         </button>
       </div>
+
+      {/* Confirmation Modal */}
+      {confirmAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              {confirmAction === 'approve' ? 'Confirm Approval' : 
+               confirmAction === 'reject' ? 'Confirm Rejection' : 'Request Revision'}
+            </h3>
+            <p className="text-sm text-gray-500 mb-6">
+              {confirmAction === 'approve' ? 'Are you sure you want to approve this request and issue the Purchase Order? This action cannot be undone easily.' : 
+               confirmAction === 'reject' ? 'Are you sure you want to reject this request? The sourcing team will be notified.' : 
+               'Are you sure you want to request a revision? This will send the request back to the recommendation stage.'}
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button 
+                onClick={() => setConfirmAction(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={executeAction}
+                className={`px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                  confirmAction === 'approve' ? 'bg-green-600 hover:bg-green-700 focus:ring-green-500' : 
+                  confirmAction === 'reject' ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' : 
+                  'bg-amber-500 hover:bg-amber-600 focus:ring-amber-500'
+                }`}
+              >
+                {confirmAction === 'approve' ? 'Yes, Approve' : 
+                 confirmAction === 'reject' ? 'Yes, Reject' : 'Yes, Request Revision'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
