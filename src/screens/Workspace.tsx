@@ -18,6 +18,7 @@ export const Workspace: React.FC<{ onNavigate: (screen: string) => void }> = ({ 
   const avgCycleTime = requests.length > 0 ? (requests.length * 0.6).toFixed(1) : '0.0';
 
   const handleRequestClick = (request: any, navigateTo?: string) => {
+    window.localStorage.setItem('genie-us-current-request', JSON.stringify(request));
     if (navigateTo) {
       onNavigate(navigateTo);
     } else {

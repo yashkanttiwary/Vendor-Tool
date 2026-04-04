@@ -1,14 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, MessageSquare, Mail, TrendingDown, Info, CheckCircle2 } from 'lucide-react';
 import { PipelineBar } from '../components/PipelineBar';
 import { mockRequest, formatCurrency } from '../data/mockData';
 import { showToast } from '../components/Toast';
+import { addAuditLog } from '../utils/auditLogger';
 
 export const Negotiation: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
+  const [currentRequest, setCurrentRequest] = useState<any>(mockRequest);
   const [proposalSent, setProposalSent] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem('genie-us-current-request');
+      if (stored) {
+        setCurrentRequest({ ...mockRequest, ...JSON.parse(stored) });
+      }
+    } catch (e) {
+      console.error("Error parsing stored request", e);
+    }
+  }, []);
 
   const handleSendProposal = (method: string) => {
     setProposalSent(true);
+    addAuditLog('Proposal Sent', `Sent proposal via ${method} for request ${currentRequest.id}`);
     showToast(`Proposal sent successfully via ${method}`);
   };
 
@@ -31,7 +45,7 @@ export const Negotiation: React.FC<{ onNavigate: (screen: string) => void }> = (
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[#1A1D23]">Negotiation Strategy</h1>
-          <p className="text-gray-500 mt-1 font-mono text-sm">Request #{mockRequest.id}</p>
+          <p className="text-gray-500 mt-1 font-mono text-sm">Request #{currentRequest.id}</p>
         </div>
       </div>
 
@@ -184,7 +198,13 @@ export const Negotiation: React.FC<{ onNavigate: (screen: string) => void }> = (
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Shortlist
         </button>
         <button 
-          onClick={() => onNavigate('recommendation')}
+          onClick={() => {
+            import('../utils/requestManager').then(({ updateRequestState }) => {
+              updateRequestState(currentRequest.id, 'Recommended', 'recommendation');
+              addAuditLog('Stage Advanced', `Advanced request ${currentRequest.id} to Recommendation`);
+              onNavigate('recommendation');
+            });
+          }}
           className="flex items-center px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
           Proceed to Recommendation <ArrowRight className="w-4 h-4 ml-2" />

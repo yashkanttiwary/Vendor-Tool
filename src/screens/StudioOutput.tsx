@@ -1,12 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, Download, Edit2, FileText, CheckSquare, ShieldAlert, CheckCircle2, Save, X } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { PipelineBar, PipelineState } from '../components/PipelineBar';
 import { mockRequest } from '../data/mockData';
 import { showToast } from '../components/Toast';
 import { useLocalStorage } from '../utils/useLocalStorage';
+import { addAuditLog } from '../utils/auditLogger';
 
 export const StudioOutput: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
+  const [currentRequest, setCurrentRequest] = useState<any>(mockRequest);
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem('genie-us-current-request');
+      if (stored) {
+        setCurrentRequest({ ...mockRequest, ...JSON.parse(stored) });
+      }
+    } catch (e) {
+      console.error("Error parsing stored request", e);
+    }
+  }, []);
+
   // M-1: Delivery Checklist Persistence
   const [checklist, setChecklist] = useLocalStorage<boolean[]>('deliveryChecklist', Array(6).fill(false));
 
@@ -50,6 +64,7 @@ Payment Terms
 
   const handleSaveBrief = () => {
     setIsEditingBrief(false);
+    addAuditLog('Brief Edited', `Edited brief for request ${mockRequest.id}`);
     showToast('Brief saved successfully');
   };
 
@@ -69,6 +84,7 @@ Payment Terms
       
       // Save the PDF
       doc.save(`Vendor_Scope_Request_${mockRequest.id}.pdf`);
+      addAuditLog('PDF Downloaded', `Downloaded PDF for request ${mockRequest.id}`);
       showToast('Download complete');
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -81,7 +97,7 @@ Payment Terms
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[#1A1D23]">STUDIO Output</h1>
-          <p className="text-gray-500 mt-1 font-mono text-sm">Request #{mockRequest.id}</p>
+          <p className="text-gray-500 mt-1 font-mono text-sm">Request #{currentRequest.id}</p>
         </div>
       </div>
 
@@ -219,7 +235,15 @@ Payment Terms
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Recommendation
         </button>
         <button 
-          onClick={() => onNavigate('approval')}
+          onClick={() => {
+            import('../utils/requestManager').then(({ updateRequestState }) => {
+              updateRequestState(currentRequest.id, 'Awaiting Approval', 'approval');
+              import('../utils/auditLogger').then(({ addAuditLog }) => {
+                addAuditLog('Stage Advanced', `Advanced request ${currentRequest.id} to Approval`);
+              });
+              onNavigate('approval');
+            });
+          }}
           className="flex items-center px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
           Proceed to Approval <ArrowRight className="w-4 h-4 ml-2" />

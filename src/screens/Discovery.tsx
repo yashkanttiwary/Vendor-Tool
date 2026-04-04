@@ -1,18 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Filter, ArrowUpDown, ChevronRight, ArrowLeft, ArrowRight, ShieldAlert, ShieldCheck, Shield, Search } from 'lucide-react';
 import { PipelineBar } from '../components/PipelineBar';
 import { mockRequest, mockCandidates, formatCurrency } from '../data/mockData';
 import { showToast } from '../components/Toast';
 import { CandidateDetail } from './CandidateDetail';
+import { addAuditLog } from '../utils/auditLogger';
 
 export const Discovery: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
+  const [currentRequest, setCurrentRequest] = useState<any>(mockRequest);
   const [candidates, setCandidates] = useState(mockCandidates);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
 
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem('genie-us-current-request');
+      if (stored) {
+        setCurrentRequest({ ...mockRequest, ...JSON.parse(stored) });
+      }
+    } catch (e) {
+      console.error("Error parsing stored request", e);
+    }
+  }, []);
+
   const handleShortlistToggle = (id: string) => {
-    setCandidates(candidates.map(c => c.id === id ? { ...c, shortlisted: !c.shortlisted } : c));
+    setCandidates(candidates.map(c => {
+      if (c.id === id) {
+        const newShortlisted = !c.shortlisted;
+        addAuditLog(
+          newShortlisted ? 'Candidate Shortlisted' : 'Candidate Removed', 
+          `${newShortlisted ? 'Shortlisted' : 'Removed'} candidate ${c.name} for request ${currentRequest.id}`
+        );
+        return { ...c, shortlisted: newShortlisted };
+      }
+      return c;
+    }));
   };
 
   const getBenchmarkColor = (benchmark: string) => {
@@ -204,7 +227,13 @@ export const Discovery: React.FC<{ onNavigate: (screen: string) => void }> = ({ 
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Scope
         </button>
         <button 
-          onClick={() => onNavigate('negotiation')}
+          onClick={() => {
+            import('../utils/requestManager').then(({ updateRequestState }) => {
+              updateRequestState(currentRequest.id, 'Negotiation', 'negotiation');
+              addAuditLog('Stage Advanced', `Advanced request ${currentRequest.id} to Negotiation`);
+              onNavigate('negotiation');
+            });
+          }}
           disabled={candidates.filter(c => c.shortlisted).length === 0}
           className={`flex items-center px-6 py-2.5 font-medium text-sm rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
             candidates.filter(c => c.shortlisted).length > 0

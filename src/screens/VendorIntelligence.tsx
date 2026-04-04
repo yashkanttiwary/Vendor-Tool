@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Star, TrendingUp, AlertCircle, MapPin, Globe, Shield } from 'lucide-react';
 import { showToast } from '../components/Toast';
+import { addAuditLog } from '../utils/auditLogger';
 
 export const VendorIntelligence: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -13,6 +14,11 @@ export const VendorIntelligence: React.FC = () => {
   ];
 
   const filteredVendors = vendors.filter(v => v.name.toLowerCase().includes(searchQuery.toLowerCase()) || v.category.toLowerCase().includes(searchQuery.toLowerCase()));
+
+  const handleVendorClick = (vendorName: string) => {
+    showToast(`Viewing details for ${vendorName}`);
+    addAuditLog('Vendor Details Viewed', `User viewed details for vendor: ${vendorName}`);
+  };
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
@@ -83,7 +89,7 @@ export const VendorIntelligence: React.FC = () => {
             </thead>
             <tbody className="text-sm divide-y divide-gray-100">
               {filteredVendors.map((vendor, index) => (
-                <tr key={index} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => showToast(`Viewing profile for ${vendor.name}`)}>
+                <tr key={index} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => handleVendorClick(vendor.name)}>
                   <td className="px-6 py-4 font-medium text-gray-900">{vendor.name}</td>
                   <td className="px-6 py-4 text-gray-600">{vendor.category}</td>
                   <td className="px-6 py-4 text-gray-600 flex items-center"><MapPin className="w-3 h-3 mr-1 text-gray-400" /> {vendor.location}</td>

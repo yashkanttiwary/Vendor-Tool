@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Users, Building, Shield, X, Mail } from 'lucide-react';
 import { showToast } from '../components/Toast';
 import { useLocalStorage } from '../utils/useLocalStorage';
+import { addAuditLog } from '../utils/auditLogger';
 
 export const Organization: React.FC = () => {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
@@ -39,6 +40,7 @@ export const Organization: React.FC = () => {
     };
 
     setTeamMembers([...teamMembers, newMember]);
+    addAuditLog('User Invited', `Invited ${inviteEmail} as ${inviteRole} to ${inviteDepartment}`);
 
     // Simulate API call
     showToast(`Invitation sent to ${inviteEmail}`);

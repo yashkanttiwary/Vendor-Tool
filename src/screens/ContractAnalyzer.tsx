@@ -1,8 +1,19 @@
 import React from 'react';
 import { FileText, Upload, AlertTriangle, CheckCircle } from 'lucide-react';
 import { showToast } from '../components/Toast';
+import { addAuditLog } from '../utils/auditLogger';
 
 export const ContractAnalyzer: React.FC = () => {
+  const handleUploadClick = () => {
+    showToast('File upload simulation started');
+    addAuditLog('Contract Upload Initiated', 'User initiated contract upload for analysis');
+  };
+
+  const handleDocumentClick = (docName: string) => {
+    showToast(`Viewing analysis for ${docName}`);
+    addAuditLog('Contract Analysis Viewed', `User viewed analysis for ${docName}`);
+  };
+
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <div className="mb-8">
@@ -17,7 +28,7 @@ export const ContractAnalyzer: React.FC = () => {
             <h3 className="text-lg font-medium text-gray-900 mb-2">Upload Contract Document</h3>
             <p className="text-sm text-gray-500 mb-6">Drag and drop your PDF or Word document here, or click to browse.</p>
             <button 
-              onClick={() => showToast('File upload simulation started')}
+              onClick={handleUploadClick}
               className="px-6 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors"
             >
               Select File
@@ -34,7 +45,11 @@ export const ContractAnalyzer: React.FC = () => {
                 { name: 'SOW_TechCorp_Q3.docx', risk: 'High', date: '2026-04-01' },
                 { name: 'NDA_GlobalLogistics.pdf', risk: 'Medium', date: '2026-03-28' }
               ].map((doc, i) => (
-                <div key={i} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer">
+                <div 
+                  key={i} 
+                  className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer"
+                  onClick={() => handleDocumentClick(doc.name)}
+                >
                   <div className="flex items-center">
                     <FileText className="w-5 h-5 text-gray-400 mr-3" />
                     <div>

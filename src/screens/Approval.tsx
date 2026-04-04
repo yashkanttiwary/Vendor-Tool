@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Check, X, RotateCcw, ShieldCheck, TrendingDown, Clock, User } from 'lucide-react';
 import { PipelineBar, PipelineState } from '../components/PipelineBar';
 import { mockRequest, formatCurrency } from '../data/mockData';
@@ -7,9 +7,21 @@ import { useLocalStorage } from '../utils/useLocalStorage';
 import { addAuditLog } from '../utils/auditLogger';
 
 export const Approval: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
+  const [currentRequest, setCurrentRequest] = useState<any>(mockRequest);
   const [auditNote, setAuditNote] = useLocalStorage('auditNote', '');
   const [isApproved, setIsApproved] = useState(false);
   const [confirmAction, setConfirmAction] = useState<'approve' | 'reject' | 'revise' | null>(null);
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem('genie-us-current-request');
+      if (stored) {
+        setCurrentRequest({ ...mockRequest, ...JSON.parse(stored) });
+      }
+    } catch (e) {
+      console.error("Error parsing stored request", e);
+    }
+  }, []);
 
   const handleActionClick = (action: 'approve' | 'reject' | 'revise') => {
     const userRole = window.localStorage.getItem('user_role') ? JSON.parse(window.localStorage.getItem('user_role')!) : 'Requester';
@@ -38,15 +50,10 @@ export const Approval: React.FC<{ onNavigate: (screen: string) => void }> = ({ o
         const storedCurrent = window.localStorage.getItem('genie-us-current-request');
         if (storedCurrent) {
           const currentReq = JSON.parse(storedCurrent);
-          const storedRequests = window.localStorage.getItem('genie-us-requests');
-          if (storedRequests) {
-            let requests = JSON.parse(storedRequests);
-            requests = requests.map((req: any) => 
-              req.id === currentReq.id ? { ...req, status: 'Done', updated: 'Just now' } : req
-            );
-            window.localStorage.setItem('genie-us-requests', JSON.stringify(requests));
+          import('../utils/requestManager').then(({ updateRequestState }) => {
+            updateRequestState(currentReq.id, 'Approved', 'workspace');
             addAuditLog('Request Approved', `Approved request ${currentReq.id} with note: ${sanitizedNote}`);
-          }
+          });
         }
       } catch (e) {
         console.error("Error updating request status", e);
@@ -57,7 +64,10 @@ export const Approval: React.FC<{ onNavigate: (screen: string) => void }> = ({ o
         const storedCurrent = window.localStorage.getItem('genie-us-current-request');
         if (storedCurrent) {
           const currentReq = JSON.parse(storedCurrent);
-          addAuditLog('Request Rejected', `Rejected request ${currentReq.id}`);
+          import('../utils/requestManager').then(({ updateRequestState }) => {
+            updateRequestState(currentReq.id, 'Rejected', 'workspace');
+            addAuditLog('Request Rejected', `Rejected request ${currentReq.id}`);
+          });
         }
       } catch (e) {}
       onNavigate('workspace');
@@ -66,7 +76,10 @@ export const Approval: React.FC<{ onNavigate: (screen: string) => void }> = ({ o
         const storedCurrent = window.localStorage.getItem('genie-us-current-request');
         if (storedCurrent) {
           const currentReq = JSON.parse(storedCurrent);
-          addAuditLog('Request Revised', `Requested revision for ${currentReq.id}`);
+          import('../utils/requestManager').then(({ updateRequestState }) => {
+            updateRequestState(currentReq.id, 'Recommended', 'recommendation');
+            addAuditLog('Request Revised', `Requested revision for ${currentReq.id}`);
+          });
         }
       } catch (e) {}
       onNavigate('recommendation');
@@ -116,7 +129,7 @@ export const Approval: React.FC<{ onNavigate: (screen: string) => void }> = ({ o
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[#1A1D23]">Approval Required</h1>
-          <p className="text-gray-500 mt-1 font-mono text-sm">Request #{mockRequest.id}</p>
+          <p className="text-gray-500 mt-1 font-mono text-sm">Request #{currentRequest.id}</p>
         </div>
       </div>
 

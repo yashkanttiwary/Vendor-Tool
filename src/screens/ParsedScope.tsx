@@ -3,6 +3,8 @@ import { CheckCircle2, AlertTriangle, Edit2, ArrowRight, ArrowLeft, Save, X } fr
 import { PipelineBar } from '../components/PipelineBar';
 import { mockRequest, formatCurrency } from '../data/mockData';
 import { showToast } from '../components/Toast';
+import { addAuditLog } from '../utils/auditLogger';
+import { updateRequestState } from '../utils/requestManager';
 
 export const ParsedScope: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
   const [currentRequest, setCurrentRequest] = useState<any>(mockRequest);
@@ -35,6 +37,7 @@ export const ParsedScope: React.FC<{ onNavigate: (screen: string) => void }> = (
 
   const handleResolveReview = (id: string) => {
     setNeedsReview(prev => prev.filter(item => item.id !== id));
+    addAuditLog('Review Resolved', `Resolved review item ${id} for request ${currentRequest.id}`);
     showToast('Review item resolved');
   };
 
@@ -49,6 +52,7 @@ export const ParsedScope: React.FC<{ onNavigate: (screen: string) => void }> = (
       item.id === id ? { ...item, text: editAssumptionText } : item
     ));
     setEditingAssumptionId(null);
+    addAuditLog('Assumption Updated', `Updated assumption ${id} for request ${currentRequest.id}`);
     showToast('Assumption updated');
   };
 
@@ -251,7 +255,11 @@ export const ParsedScope: React.FC<{ onNavigate: (screen: string) => void }> = (
           <ArrowLeft className="w-4 h-4 mr-2" /> Edit Request
         </button>
         <button 
-          onClick={() => onNavigate('discovery')}
+          onClick={() => {
+            updateRequestState(currentRequest.id, 'Discovery', 'discovery');
+            addAuditLog('Stage Advanced', `Advanced request ${currentRequest.id} to Discovery`);
+            onNavigate('discovery');
+          }}
           className="flex items-center px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
           Proceed to Discovery <ArrowRight className="w-4 h-4 ml-2" />

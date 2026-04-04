@@ -1,10 +1,23 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, ShieldCheck, Shield, Award, TrendingDown, Info, Edit2 } from 'lucide-react';
 import { PipelineBar } from '../components/PipelineBar';
 import { mockRequest, formatCurrency } from '../data/mockData';
 import { showToast } from '../components/Toast';
 
 export const Recommendation: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
+  const [currentRequest, setCurrentRequest] = useState<any>(mockRequest);
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem('genie-us-current-request');
+      if (stored) {
+        setCurrentRequest({ ...mockRequest, ...JSON.parse(stored) });
+      }
+    } catch (e) {
+      console.error("Error parsing stored request", e);
+    }
+  }, []);
+
   const handlePipelineNavigate = (state: string) => {
     const stateToScreenMap: Record<string, string> = {
       'parsed': 'parsed',
@@ -24,7 +37,7 @@ export const Recommendation: React.FC<{ onNavigate: (screen: string) => void }> 
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[#1A1D23]">Recommendation</h1>
-          <p className="text-gray-500 mt-1 font-mono text-sm">Request #{mockRequest.id}</p>
+          <p className="text-gray-500 mt-1 font-mono text-sm">Request #{currentRequest.id}</p>
         </div>
       </div>
 
@@ -197,7 +210,15 @@ export const Recommendation: React.FC<{ onNavigate: (screen: string) => void }> 
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Negotiation
         </button>
         <button 
-          onClick={() => onNavigate('studio')}
+          onClick={() => {
+            import('../utils/requestManager').then(({ updateRequestState }) => {
+              updateRequestState(currentRequest.id, 'Studio Output', 'studio');
+              import('../utils/auditLogger').then(({ addAuditLog }) => {
+                addAuditLog('Stage Advanced', `Advanced request ${currentRequest.id} to Studio Output`);
+              });
+              onNavigate('studio');
+            });
+          }}
           className="flex items-center px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
           Generate STUDIO Output <ArrowRight className="w-4 h-4 ml-2" />

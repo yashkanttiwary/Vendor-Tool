@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign, PieChart as PieChartIcon, Activity } from 'lucide-react';
+import { addAuditLog } from '../utils/auditLogger';
 
 const spendData = [
   { name: 'Jan', vendors: 400000, influencers: 240000, events: 240000 },
@@ -21,6 +22,14 @@ const categoryData = [
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 export const SpendAnalytics: React.FC = () => {
+  const [dateRange, setDateRange] = useState('Last 6 Months');
+
+  const handleDateRangeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newRange = e.target.value;
+    setDateRange(newRange);
+    addAuditLog('Spend Analytics Viewed', `Viewed spend analytics for ${newRange}`);
+  };
+
   return (
     <div className="p-8 max-w-7xl mx-auto animate-in fade-in duration-300">
       <div className="mb-8 flex justify-between items-end">
@@ -29,7 +38,11 @@ export const SpendAnalytics: React.FC = () => {
           <p className="text-gray-500 mt-2">Visualize category spend and identify savings opportunities.</p>
         </div>
         <div className="flex space-x-2">
-          <select className="border border-gray-300 rounded-md text-sm px-3 py-2 bg-white">
+          <select 
+            value={dateRange}
+            onChange={handleDateRangeChange}
+            className="border border-gray-300 rounded-md text-sm px-3 py-2 bg-white"
+          >
             <option>Last 6 Months</option>
             <option>This Year</option>
             <option>Last Year</option>
