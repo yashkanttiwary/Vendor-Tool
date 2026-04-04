@@ -1,19 +1,58 @@
 import React from 'react';
 import { Home, LayoutGrid, MonitorPlay, Users, Settings, UserCircle, ShieldCheck } from 'lucide-react';
+import { useLocalStorage } from '../utils/useLocalStorage';
 
 interface SidebarProps {
   activeScreen: string;
   setActiveScreen: (screen: string) => void;
 }
 
+const translations: Record<string, Record<string, string>> = {
+  en: {
+    workspace: 'Workspace',
+    modules: 'Modules',
+    studio: 'Studio',
+    audit: 'Audit & Risk',
+    organization: 'Organization',
+    settings: 'Settings'
+  },
+  es: {
+    workspace: 'Espacio de trabajo',
+    modules: 'Módulos',
+    studio: 'Estudio',
+    audit: 'Auditoría y Riesgo',
+    organization: 'Organización',
+    settings: 'Ajustes'
+  },
+  fr: {
+    workspace: 'Espace de travail',
+    modules: 'Modules',
+    studio: 'Studio',
+    audit: 'Audit et Risque',
+    organization: 'Organisation',
+    settings: 'Paramètres'
+  },
+  de: {
+    workspace: 'Arbeitsbereich',
+    modules: 'Module',
+    studio: 'Studio',
+    audit: 'Prüfung & Risiko',
+    organization: 'Organisation',
+    settings: 'Einstellungen'
+  }
+};
+
 export const Sidebar: React.FC<SidebarProps> = ({ activeScreen, setActiveScreen }) => {
+  const [language] = useLocalStorage('language', 'en');
+  const t = translations[language as keyof typeof translations] || translations.en;
+
   const navItems = [
-    { id: 'workspace', label: 'Workspace', icon: Home },
-    { id: 'modules', label: 'Modules', icon: LayoutGrid },
-    { id: 'studio', label: 'Studio', icon: MonitorPlay },
-    { id: 'audit', label: 'Audit & Risk', icon: ShieldCheck },
-    { id: 'organization', label: 'Organization', icon: Users },
-    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'workspace', label: t.workspace, icon: Home },
+    { id: 'modules', label: t.modules, icon: LayoutGrid },
+    { id: 'studio', label: t.studio, icon: MonitorPlay },
+    { id: 'audit', label: t.audit, icon: ShieldCheck },
+    { id: 'organization', label: t.organization, icon: Users },
+    { id: 'settings', label: t.settings, icon: Settings },
   ];
 
   return (

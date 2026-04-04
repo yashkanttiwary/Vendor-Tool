@@ -2,9 +2,16 @@ import React, { useState } from 'react';
 import { TrendingUp, ArrowUpRight, CheckCircle2, Clock, X } from 'lucide-react';
 import { formatCurrency } from '../data/mockData';
 import { showToast } from '../components/Toast';
+import { useLocalStorage } from '../utils/useLocalStorage';
 
 export const Workspace: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
   const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
+
+  const [requests, setRequests] = useLocalStorage('genie-us-requests', [
+    { id: 'GU-0142', category: 'Vendor Procurement', status: 'Negotiation', quote: 240000, updated: '2h ago', navigate: 'parsed' },
+    { id: 'GU-0139', category: 'Influencer Sourcing', status: 'Approval', quote: 180000, updated: '5h ago' },
+    { id: 'GU-0135', category: 'Event Sourcing', status: 'Done', quote: 520000, updated: '1d ago' },
+  ]);
 
   const handleRequestClick = (request: any, navigateTo?: string) => {
     if (navigateTo) {
@@ -13,12 +20,6 @@ export const Workspace: React.FC<{ onNavigate: (screen: string) => void }> = ({ 
       setSelectedRequest(request);
     }
   };
-
-  const requests = [
-    { id: 'GU-0142', category: 'Vendor Procurement', status: 'Negotiation', quote: 240000, updated: '2h ago', navigate: 'parsed' },
-    { id: 'GU-0139', category: 'Influencer Sourcing', status: 'Approval', quote: 180000, updated: '5h ago' },
-    { id: 'GU-0135', category: 'Event Sourcing', status: 'Done', quote: 520000, updated: '1d ago' },
-  ];
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -31,9 +32,9 @@ export const Workspace: React.FC<{ onNavigate: (screen: string) => void }> = ({ 
         <div className="bg-white p-6 rounded-lg border border-gray-100 shadow-xs">
           <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Active Requests</div>
           <div className="flex items-end justify-between">
-            <div className="text-3xl font-mono font-bold text-[#1A1D23]">12</div>
+            <div className="text-3xl font-mono font-bold text-[#1A1D23]">{requests.length}</div>
             <div className="flex items-center text-green-600 text-sm font-medium">
-              <TrendingUp className="w-4 h-4 mr-1" /> +2
+              <TrendingUp className="w-4 h-4 mr-1" /> +{requests.length > 3 ? requests.length - 3 : 0}
             </div>
           </div>
         </div>

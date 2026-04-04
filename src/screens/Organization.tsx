@@ -1,12 +1,19 @@
 import React, { useState } from 'react';
 import { Users, Building, Shield, X, Mail } from 'lucide-react';
 import { showToast } from '../components/Toast';
+import { useLocalStorage } from '../utils/useLocalStorage';
 
 export const Organization: React.FC = () => {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('Viewer');
   const [inviteDepartment, setInviteDepartment] = useState('Operations');
+
+  const [teamMembers, setTeamMembers] = useLocalStorage('genie-us-team', [
+    { id: 1, name: 'Amit Sharma', email: 'amit@example.com', role: 'Finance Controller', department: 'Finance', status: 'Active' },
+    { id: 2, name: 'Priya Patel', email: 'priya@example.com', role: 'Procurement Manager', department: 'Operations', status: 'Active' },
+    { id: 3, name: 'Rahul Desai', email: 'rahul@example.com', role: 'Operations Lead', department: 'Operations', status: 'Offline' },
+  ]);
 
   const handleInvite = (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,6 +28,17 @@ export const Organization: React.FC = () => {
       showToast('Please enter a valid email address');
       return;
     }
+
+    const newMember = {
+      id: Date.now(),
+      name: inviteEmail.split('@')[0], // Use part of email as name for now
+      email: inviteEmail,
+      role: inviteRole,
+      department: inviteDepartment,
+      status: 'Pending'
+    };
+
+    setTeamMembers([...teamMembers, newMember]);
 
     // Simulate API call
     showToast(`Invitation sent to ${inviteEmail}`);
@@ -57,24 +75,22 @@ export const Organization: React.FC = () => {
               </tr>
             </thead>
             <tbody className="text-sm text-gray-700">
-              <tr className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="p-4 font-medium text-[#1A1D23]">Amit Sharma</td>
-                <td className="p-4">Finance Controller</td>
-                <td className="p-4">Finance</td>
-                <td className="p-4"><span className="inline-flex px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Active</span></td>
-              </tr>
-              <tr className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="p-4 font-medium text-[#1A1D23]">Priya Patel</td>
-                <td className="p-4">Procurement Manager</td>
-                <td className="p-4">Operations</td>
-                <td className="p-4"><span className="inline-flex px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Active</span></td>
-              </tr>
-              <tr className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="p-4 font-medium text-[#1A1D23]">Rahul Desai</td>
-                <td className="p-4">Operations Lead</td>
-                <td className="p-4">Operations</td>
-                <td className="p-4"><span className="inline-flex px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">Offline</span></td>
-              </tr>
+              {teamMembers.map((member: any) => (
+                <tr key={member.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="p-4 font-medium text-[#1A1D23]">{member.name}</td>
+                  <td className="p-4">{member.role}</td>
+                  <td className="p-4">{member.department}</td>
+                  <td className="p-4">
+                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                      member.status === 'Active' ? 'bg-green-100 text-green-800' :
+                      member.status === 'Pending' ? 'bg-amber-100 text-amber-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {member.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

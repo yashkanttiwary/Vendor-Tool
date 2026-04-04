@@ -20,7 +20,7 @@ export const ModulesDirectory: React.FC<{ onNavigate: (screen: string) => void }
       icon: FileText,
       color: 'text-purple-600',
       bgColor: 'bg-purple-100',
-      action: () => showToast('Contract Analyzer coming soon')
+      action: () => onNavigate('contracts')
     },
     {
       id: 'vendor',
@@ -29,7 +29,7 @@ export const ModulesDirectory: React.FC<{ onNavigate: (screen: string) => void }
       icon: Users,
       color: 'text-green-600',
       bgColor: 'bg-green-100',
-      action: () => showToast('Vendor Intelligence coming soon')
+      action: () => onNavigate('vendor')
     },
     {
       id: 'spend',
@@ -38,7 +38,7 @@ export const ModulesDirectory: React.FC<{ onNavigate: (screen: string) => void }
       icon: BarChart,
       color: 'text-amber-600',
       bgColor: 'bg-amber-100',
-      action: () => showToast('Spend Analytics coming soon')
+      action: () => onNavigate('spend')
     }
   ];
 

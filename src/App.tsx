@@ -14,6 +14,10 @@ import { Organization } from './screens/Organization';
 import { Settings } from './screens/Settings';
 import { AuditRisk } from './screens/AuditRisk';
 
+import { SpendAnalytics } from './screens/SpendAnalytics';
+import { ContractAnalyzer } from './screens/ContractAnalyzer';
+import { VendorIntelligence } from './screens/VendorIntelligence';
+
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState('workspace');
 
@@ -37,6 +41,9 @@ export default function App() {
         {currentScreen === 'recommendation' && <Recommendation onNavigate={handleNavigate} />}
         {currentScreen === 'studio' && <StudioOutput onNavigate={handleNavigate} />}
         {currentScreen === 'approval' && <Approval onNavigate={handleNavigate} />}
+        {currentScreen === 'spend' && <SpendAnalytics />}
+        {currentScreen === 'contracts' && <ContractAnalyzer />}
+        {currentScreen === 'vendor' && <VendorIntelligence />}
       </main>
       <Toast />
     </div>

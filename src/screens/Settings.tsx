@@ -5,7 +5,7 @@ import { useLocalStorage } from '../utils/useLocalStorage';
 
 export const Settings: React.FC = () => {
   const [currency, setCurrency] = useLocalStorage('settings_currency', 'INR (₹)');
-  const [language, setLanguage] = useLocalStorage('settings_language', 'English (UK)');
+  const [language, setLanguage] = useLocalStorage('language', 'en');
   const [emailAlerts, setEmailAlerts] = useLocalStorage('settings_emailAlerts', true);
 
   const handleCurrencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -15,7 +15,7 @@ export const Settings: React.FC = () => {
 
   const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setLanguage(e.target.value);
-    showToast(`Language updated to ${e.target.value}`);
+    showToast(`Language updated to ${e.target.options[e.target.selectedIndex].text}`);
   };
 
   const handleEmailAlertsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,9 +62,10 @@ export const Settings: React.FC = () => {
                 onChange={handleLanguageChange}
                 className="border border-gray-300 rounded-md text-sm p-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               >
-                <option value="English (UK)">English (UK)</option>
-                <option value="English (US)">English (US)</option>
-                <option value="Hindi">Hindi</option>
+                <option value="en">English (UK)</option>
+                <option value="es">Español</option>
+                <option value="fr">Français</option>
+                <option value="de">Deutsch</option>
               </select>
             </div>
           </div>

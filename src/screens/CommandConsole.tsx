@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Package, Users, Calendar, PenTool, MonitorPlay, Printer, UploadCloud, ChevronDown, ChevronRight, File as FileIcon, X, CheckCircle2 } from 'lucide-react';
 import { sanitizeInput, isValidCity, isValidBudget, isValidTimeline } from '../utils/sanitize';
+import { useLocalStorage } from '../utils/useLocalStorage';
 
 export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
   const [input, setInput] = useState('');
@@ -12,6 +13,12 @@ export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [requests, setRequests] = useLocalStorage('genie-us-requests', [
+    { id: 'GU-0142', category: 'Vendor Procurement', status: 'Negotiation', quote: 240000, updated: '2h ago', navigate: 'parsed' },
+    { id: 'GU-0139', category: 'Influencer Sourcing', status: 'Approval', quote: 180000, updated: '5h ago' },
+    { id: 'GU-0135', category: 'Event Sourcing', status: 'Done', quote: 520000, updated: '1d ago' },
+  ]);
 
   const categories = [
     { id: 'vendor', label: 'Vendor', icon: Package },
@@ -60,6 +67,27 @@ export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> 
 
     // In a real app, we would send these sanitized values to the backend
     // console.log({ sanitizedInput, sanitizedCategory, sanitizedCity, sanitizedBudget, sanitizedTimeline, selectedFile });
+
+    const newRequestId = `GU-0${Math.floor(100 + Math.random() * 900)}`;
+    const newRequest = {
+      id: newRequestId,
+      category: sanitizedCategory || 'General Sourcing',
+      status: 'Parsed',
+      quote: 0,
+      updated: 'Just now',
+      navigate: 'parsed'
+    };
+
+    setRequests([newRequest, ...requests]);
+    
+    // Store the current request details to be used in ParsedScope
+    window.localStorage.setItem('genie-us-current-request', JSON.stringify({
+      ...newRequest,
+      input: sanitizedInput,
+      city: sanitizedCity,
+      budget: sanitizedBudget,
+      timeline: sanitizedTimeline
+    }));
 
     onNavigate('parsed');
   };

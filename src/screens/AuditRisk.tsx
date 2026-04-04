@@ -5,6 +5,8 @@ import { showToast } from '../components/Toast';
 export const AuditRisk: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAlert, setSelectedAlert] = useState<any | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filterSeverity, setFilterSeverity] = useState<string | null>(null);
 
   const [alerts, setAlerts] = useState([
     { id: 'ALT-8492', entity: 'Global Tech Supplies', type: 'GST Mismatch', severity: 'High', date: '2026-04-01', details: 'The GST number provided by the vendor does not match the official records. This could indicate potential fraud or administrative error. Immediate verification is required before proceeding with any transactions.' },
@@ -20,11 +22,13 @@ export const AuditRisk: React.FC = () => {
     }
   };
 
-  const filteredAlerts = alerts.filter(alert => 
-    alert.entity.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    alert.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    alert.type.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredAlerts = alerts.filter(alert => {
+    const matchesSearch = alert.entity.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      alert.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      alert.type.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSeverity = filterSeverity ? alert.severity === filterSeverity : true;
+    return matchesSearch && matchesSeverity;
+  });
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
@@ -44,12 +48,48 @@ export const AuditRisk: React.FC = () => {
               className="pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none w-64"
             />
           </div>
-          <button 
-            onClick={() => showToast('Advanced filters coming soon')}
-            className="flex items-center px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-md transition-colors focus:ring-2 focus:ring-blue-500 focus:outline-none"
-          >
-            <Filter className="w-4 h-4 mr-2" /> Filter
-          </button>
+          <div className="relative">
+            <button 
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className={`flex items-center px-4 py-2 border text-sm font-medium rounded-md transition-colors focus:ring-2 focus:ring-blue-500 focus:outline-none ${
+                filterSeverity ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-gray-300 hover:bg-gray-50 text-gray-700'
+              }`}
+            >
+              <Filter className="w-4 h-4 mr-2" /> 
+              {filterSeverity ? `Severity: ${filterSeverity}` : 'Filter'}
+            </button>
+            
+            {isFilterOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-100 z-10">
+                <div className="py-1">
+                  <button
+                    onClick={() => { setFilterSeverity(null); setIsFilterOpen(false); }}
+                    className={`block w-full text-left px-4 py-2 text-sm ${!filterSeverity ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-50'}`}
+                  >
+                    All Severities
+                  </button>
+                  <button
+                    onClick={() => { setFilterSeverity('High'); setIsFilterOpen(false); }}
+                    className={`block w-full text-left px-4 py-2 text-sm ${filterSeverity === 'High' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-50'}`}
+                  >
+                    High Severity
+                  </button>
+                  <button
+                    onClick={() => { setFilterSeverity('Medium'); setIsFilterOpen(false); }}
+                    className={`block w-full text-left px-4 py-2 text-sm ${filterSeverity === 'Medium' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-50'}`}
+                  >
+                    Medium Severity
+                  </button>
+                  <button
+                    onClick={() => { setFilterSeverity('Low'); setIsFilterOpen(false); }}
+                    className={`block w-full text-left px-4 py-2 text-sm ${filterSeverity === 'Low' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-50'}`}
+                  >
+                    Low Severity
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

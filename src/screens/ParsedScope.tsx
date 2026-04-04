@@ -1,12 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CheckCircle2, AlertTriangle, Edit2, ArrowRight, ArrowLeft, Save, X } from 'lucide-react';
 import { PipelineBar } from '../components/PipelineBar';
 import { mockRequest, formatCurrency } from '../data/mockData';
 import { showToast } from '../components/Toast';
 
 export const ParsedScope: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
+  const [currentRequest, setCurrentRequest] = useState<any>(mockRequest);
   const [needsReview, setNeedsReview] = useState(mockRequest.needsReview);
   const [assumptions, setAssumptions] = useState(mockRequest.assumptions);
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem('genie-us-current-request');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        setCurrentRequest({
+          ...mockRequest,
+          ...parsed,
+          category: parsed.category || mockRequest.category,
+          city: parsed.city || mockRequest.city,
+          budget: parsed.budget ? parseFloat(parsed.budget.replace(/[^0-9.-]+/g,"")) || mockRequest.budget : mockRequest.budget,
+          timeline: parsed.timeline || mockRequest.timeline,
+        });
+      }
+    } catch (e) {
+      console.error("Error parsing stored request", e);
+    }
+  }, []);
 
   const [editingAssumptionId, setEditingAssumptionId] = useState<string | null>(null);
   const [editAssumptionText, setEditAssumptionText] = useState('');
@@ -53,7 +73,7 @@ export const ParsedScope: React.FC<{ onNavigate: (screen: string) => void }> = (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1A1D23]">Request #{mockRequest.id}</h1>
+          <h1 className="text-2xl font-bold text-[#1A1D23]">Request #{currentRequest.id}</h1>
           <p className="text-gray-500 mt-1">Review and confirm structured scope</p>
         </div>
       </div>
@@ -77,42 +97,42 @@ export const ParsedScope: React.FC<{ onNavigate: (screen: string) => void }> = (
               <tr className="border-b border-gray-50">
                 <td className="px-6 py-4 font-mono text-xs uppercase tracking-wider text-gray-500 w-1/3">Category</td>
                 <td className="px-6 py-4 font-medium text-[#1A1D23] flex items-center justify-between">
-                  {mockRequest.category}
+                  {currentRequest.category}
                   <CheckCircle2 className="w-4 h-4 text-green-500" />
                 </td>
               </tr>
               <tr className="border-b border-gray-50">
                 <td className="px-6 py-4 font-mono text-xs uppercase tracking-wider text-gray-500">City / Location</td>
                 <td className="px-6 py-4 font-medium text-[#1A1D23] flex items-center justify-between">
-                  {mockRequest.city}
+                  {currentRequest.city}
                   <CheckCircle2 className="w-4 h-4 text-green-500" />
                 </td>
               </tr>
               <tr className="border-b border-gray-50">
                 <td className="px-6 py-4 font-mono text-xs uppercase tracking-wider text-gray-500">Budget</td>
                 <td className="px-6 py-4 font-mono font-medium text-[#1A1D23] flex items-center justify-between">
-                  {formatCurrency(mockRequest.budget)}
+                  {formatCurrency(currentRequest.budget)}
                   <CheckCircle2 className="w-4 h-4 text-green-500" />
                 </td>
               </tr>
               <tr className="border-b border-gray-50">
                 <td className="px-6 py-4 font-mono text-xs uppercase tracking-wider text-gray-500">Timeline</td>
                 <td className="px-6 py-4 font-medium text-[#1A1D23] flex items-center justify-between">
-                  {mockRequest.timeline}
+                  {currentRequest.timeline}
                   <CheckCircle2 className="w-4 h-4 text-green-500" />
                 </td>
               </tr>
               <tr className="border-b border-gray-50">
                 <td className="px-6 py-4 font-mono text-xs uppercase tracking-wider text-gray-500">Services</td>
                 <td className="px-6 py-4 font-medium text-[#1A1D23] flex items-center justify-between">
-                  {mockRequest.services}
+                  {currentRequest.services}
                   <CheckCircle2 className="w-4 h-4 text-green-500" />
                 </td>
               </tr>
               <tr>
                 <td className="px-6 py-4 font-mono text-xs uppercase tracking-wider text-gray-500">Quantity</td>
                 <td className="px-6 py-4 font-mono font-medium text-[#1A1D23] flex items-center justify-between">
-                  {mockRequest.quantity}
+                  {currentRequest.quantity}
                   <CheckCircle2 className="w-4 h-4 text-green-500" />
                 </td>
               </tr>
