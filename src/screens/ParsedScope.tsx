@@ -19,8 +19,10 @@ export const ParsedScope: React.FC<{ onNavigate: (screen: string) => void }> = (
           ...parsed,
           category: parsed.category || mockRequest.category,
           city: parsed.city || mockRequest.city,
-          budget: parsed.budget ? parseFloat(parsed.budget.replace(/[^0-9.-]+/g,"")) || mockRequest.budget : mockRequest.budget,
+          budget: parsed.budget || mockRequest.budget,
           timeline: parsed.timeline || mockRequest.timeline,
+          quantity: parsed.quantity || mockRequest.quantity,
+          services: parsed.services || mockRequest.services,
         });
       }
     } catch (e) {
@@ -111,7 +113,7 @@ export const ParsedScope: React.FC<{ onNavigate: (screen: string) => void }> = (
               <tr className="border-b border-gray-50">
                 <td className="px-6 py-4 font-mono text-xs uppercase tracking-wider text-gray-500">Budget</td>
                 <td className="px-6 py-4 font-mono font-medium text-[#1A1D23] flex items-center justify-between">
-                  {formatCurrency(currentRequest.budget)}
+                  {typeof currentRequest.budget === 'number' ? formatCurrency(currentRequest.budget) : currentRequest.budget}
                   <CheckCircle2 className="w-4 h-4 text-green-500" />
                 </td>
               </tr>

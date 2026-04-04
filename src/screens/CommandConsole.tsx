@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Package, Users, Calendar, PenTool, MonitorPlay, Printer, UploadCloud, ChevronDown, ChevronRight, File as FileIcon, X, CheckCircle2 } from 'lucide-react';
 import { sanitizeInput, isValidCity, isValidBudget, isValidTimeline } from '../utils/sanitize';
 import { useLocalStorage } from '../utils/useLocalStorage';
+import { addAuditLog } from '../utils/auditLogger';
 
 export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
   const [input, setInput] = useState('');
@@ -44,6 +45,11 @@ export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> 
       return;
     }
     
+    if (/<|>/g.test(input) || /<|>/g.test(category) || /<|>/g.test(city) || /<|>/g.test(budget) || /<|>/g.test(timeline)) {
+      setError('Input contains invalid characters (< or >). Please remove them.');
+      return;
+    }
+    
     // Validate optional fields even if advanced is closed
     if (budget && !isValidBudget(budget)) {
       setError('Budget contains invalid characters or is too long. Please use numbers and currency symbols.');
@@ -68,25 +74,57 @@ export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> 
     // In a real app, we would send these sanitized values to the backend
     // console.log({ sanitizedInput, sanitizedCategory, sanitizedCity, sanitizedBudget, sanitizedTimeline, selectedFile });
 
+    // Simulate AI extraction if fields are empty
+    let extractedCity = sanitizedCity;
+    let extractedBudget = sanitizedBudget;
+    let extractedTimeline = sanitizedTimeline;
+    let extractedQuantity = "TBD";
+    let extractedServices = "General Request";
+
+    if (sanitizedInput) {
+      const lowerInput = sanitizedInput.toLowerCase();
+      if (!extractedCity) {
+        const cities = ['lucknow', 'bengaluru', 'mumbai', 'delhi', 'jaipur', 'pune', 'hyderabad', 'chennai'];
+        const foundCity = cities.find(c => lowerInput.includes(c));
+        if (foundCity) extractedCity = foundCity.charAt(0).toUpperCase() + foundCity.slice(1);
+      }
+      if (!extractedBudget) {
+        const budgetMatch = sanitizedInput.match(/₹\s*([0-9.,]+[kKlLmM]?)/i) || sanitizedInput.match(/budget\s*(?:of)?\s*([0-9.,]+[kKlLmM]?)/i);
+        if (budgetMatch) extractedBudget = budgetMatch[1];
+      }
+      if (!extractedTimeline) {
+        const timelineMatch = sanitizedInput.match(/([0-9]+)\s*(week|month|day)s?/i);
+        if (timelineMatch) extractedTimeline = `${timelineMatch[1]} ${timelineMatch[2]}s`;
+      }
+      
+      const quantityMatch = sanitizedInput.match(/([0-9]+)\s*(chairs|units|people|influencers|seats)/i);
+      if (quantityMatch) extractedQuantity = `${quantityMatch[1]} ${quantityMatch[2]}`;
+      
+      extractedServices = sanitizedInput.length > 30 ? sanitizedInput.substring(0, 30) + '...' : sanitizedInput;
+    }
+
     const newRequestId = `GU-0${Math.floor(100 + Math.random() * 900)}`;
     const newRequest = {
       id: newRequestId,
       category: sanitizedCategory || 'General Sourcing',
       status: 'Parsed',
-      quote: 0,
+      quote: extractedBudget ? parseFloat(extractedBudget.toString().replace(/[^0-9.-]+/g,"")) || 0 : 0,
       updated: 'Just now',
       navigate: 'parsed'
     };
 
     setRequests([newRequest, ...requests]);
+    addAuditLog('Request Created', `Created request ${newRequestId} via Command Console`);
     
     // Store the current request details to be used in ParsedScope
     window.localStorage.setItem('genie-us-current-request', JSON.stringify({
       ...newRequest,
       input: sanitizedInput,
-      city: sanitizedCity,
-      budget: sanitizedBudget,
-      timeline: sanitizedTimeline
+      city: extractedCity || 'Unspecified',
+      budget: extractedBudget || 'Unspecified',
+      timeline: extractedTimeline || 'Unspecified',
+      quantity: extractedQuantity,
+      services: extractedServices
     }));
 
     onNavigate('parsed');

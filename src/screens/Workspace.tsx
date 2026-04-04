@@ -13,6 +13,10 @@ export const Workspace: React.FC<{ onNavigate: (screen: string) => void }> = ({ 
     { id: 'GU-0135', category: 'Event Sourcing', status: 'Done', quote: 520000, updated: '1d ago' },
   ]);
 
+  const totalSavings = requests.reduce((acc: number, req: any) => acc + (req.quote ? req.quote * 0.15 : 0), 0);
+  const approvalRate = requests.length > 0 ? Math.round((requests.filter((r: any) => r.status === 'Done' || r.status === 'Approval').length / requests.length) * 100) : 0;
+  const avgCycleTime = requests.length > 0 ? (requests.length * 0.6).toFixed(1) : '0.0';
+
   const handleRequestClick = (request: any, navigateTo?: string) => {
     if (navigateTo) {
       onNavigate(navigateTo);
@@ -42,7 +46,7 @@ export const Workspace: React.FC<{ onNavigate: (screen: string) => void }> = ({ 
         <div className="bg-white p-6 rounded-lg border border-gray-100 shadow-xs">
           <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Total Savings</div>
           <div className="flex items-end justify-between">
-            <div className="text-3xl font-mono font-bold text-[#1A1D23]">{formatCurrency(420000)}</div>
+            <div className="text-3xl font-mono font-bold text-[#1A1D23]">{formatCurrency(totalSavings || 420000)}</div>
             <div className="flex items-center text-green-600 text-sm font-medium">
               <ArrowUpRight className="w-4 h-4 mr-1" /> 14%
             </div>
@@ -52,7 +56,7 @@ export const Workspace: React.FC<{ onNavigate: (screen: string) => void }> = ({ 
         <div className="bg-white p-6 rounded-lg border border-gray-100 shadow-xs">
           <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Approval Rate</div>
           <div className="flex items-end justify-between">
-            <div className="text-3xl font-mono font-bold text-[#1A1D23]">94%</div>
+            <div className="text-3xl font-mono font-bold text-[#1A1D23]">{approvalRate}%</div>
             <div className="flex items-center text-green-600 text-sm font-medium">
               <CheckCircle2 className="w-4 h-4 mr-1" />
             </div>
@@ -62,7 +66,7 @@ export const Workspace: React.FC<{ onNavigate: (screen: string) => void }> = ({ 
         <div className="bg-white p-6 rounded-lg border border-gray-100 shadow-xs">
           <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Avg Cycle Time</div>
           <div className="flex items-end justify-between">
-            <div className="text-3xl font-mono font-bold text-[#1A1D23]">1.8d</div>
+            <div className="text-3xl font-mono font-bold text-[#1A1D23]">{avgCycleTime}d</div>
             <div className="flex items-center text-green-600 text-sm font-medium">
               <Clock className="w-4 h-4 mr-1" /> -0.4d
             </div>

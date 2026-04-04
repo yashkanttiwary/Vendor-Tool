@@ -2,11 +2,13 @@ import React from 'react';
 import { Settings as SettingsIcon, Bell, Lock, Globe } from 'lucide-react';
 import { showToast } from '../components/Toast';
 import { useLocalStorage } from '../utils/useLocalStorage';
+import { addAuditLog } from '../utils/auditLogger';
 
 export const Settings: React.FC = () => {
   const [currency, setCurrency] = useLocalStorage('settings_currency', 'INR (₹)');
   const [language, setLanguage] = useLocalStorage('language', 'en');
   const [emailAlerts, setEmailAlerts] = useLocalStorage('settings_emailAlerts', true);
+  const [userRole, setUserRole] = useLocalStorage('user_role', 'Requester');
 
   const handleCurrencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setCurrency(e.target.value);
@@ -16,6 +18,13 @@ export const Settings: React.FC = () => {
   const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setLanguage(e.target.value);
     showToast(`Language updated to ${e.target.options[e.target.selectedIndex].text}`);
+  };
+
+  const handleRoleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newRole = e.target.value;
+    setUserRole(newRole);
+    addAuditLog('Role Changed', `User role changed to ${newRole}`);
+    showToast(`Role updated to ${newRole}`);
   };
 
   const handleEmailAlertsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,6 +75,21 @@ export const Settings: React.FC = () => {
                 <option value="es">Español</option>
                 <option value="fr">Français</option>
                 <option value="de">Deutsch</option>
+              </select>
+            </div>
+            <div className="flex justify-between items-center pt-4 border-t border-gray-100">
+              <div>
+                <h3 className="text-sm font-medium text-[#1A1D23]">Current Role (Simulation)</h3>
+                <p className="text-xs text-gray-500">Change your role to test access controls.</p>
+              </div>
+              <select 
+                value={userRole}
+                onChange={handleRoleChange}
+                className="border border-gray-300 rounded-md text-sm p-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              >
+                <option value="Requester">Requester</option>
+                <option value="Approver">Approver</option>
+                <option value="Admin">Admin</option>
               </select>
             </div>
           </div>

@@ -14,8 +14,38 @@ export const AuditRisk: React.FC = () => {
     { id: 'ALT-8490', entity: 'Metro Caterers', type: 'Missing Insurance Cert', severity: 'Medium', date: '2026-03-28', details: 'The vendor has not provided a valid insurance certificate. This is a mandatory requirement for all vendors providing on-site services.' },
   ]);
 
+  const [auditLogs, setAuditLogs] = useState<any[]>(() => {
+    try {
+      const stored = window.localStorage.getItem('genie-us-audit-logs');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const addAuditLog = (action: string, details: string) => {
+    const userRole = window.localStorage.getItem('user_role') ? JSON.parse(window.localStorage.getItem('user_role')!) : 'Requester';
+    const newLog = {
+      id: `LOG-${Math.floor(1000 + Math.random() * 9000)}`,
+      action,
+      details,
+      user: userRole,
+      timestamp: new Date().toISOString(),
+    };
+    const updatedLogs = [newLog, ...auditLogs];
+    setAuditLogs(updatedLogs);
+    window.localStorage.setItem('genie-us-audit-logs', JSON.stringify(updatedLogs));
+  };
+
   const handleResolve = (id: string) => {
+    const userRole = window.localStorage.getItem('user_role') ? JSON.parse(window.localStorage.getItem('user_role')!) : 'Requester';
+    if (userRole !== 'Admin' && userRole !== 'Approver') {
+      showToast('Error: Only Admins or Approvers can resolve alerts.');
+      return;
+    }
+
     setAlerts(prev => prev.filter(alert => alert.id !== id));
+    addAuditLog('Alert Resolved', `Resolved alert ${id}`);
     showToast(`Alert ${id} resolved`);
     if (selectedAlert?.id === id) {
       setSelectedAlert(null);
@@ -134,7 +164,7 @@ export const AuditRisk: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-8">
         <div className="p-6 border-b border-gray-100">
           <h2 className="text-lg font-bold text-[#1A1D23]">Recent Risk Alerts</h2>
         </div>
@@ -185,6 +215,45 @@ export const AuditRisk: React.FC = () => {
                 <tr>
                   <td colSpan={6} className="p-8 text-center text-gray-500">
                     No alerts found matching your search.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-gray-100">
+          <h2 className="text-lg font-bold text-[#1A1D23]">System Audit Logs</h2>
+          <p className="text-sm text-gray-500 mt-1">Immutable record of system actions.</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <th className="p-4">Log ID</th>
+                <th className="p-4">Timestamp</th>
+                <th className="p-4">Actor Role</th>
+                <th className="p-4">Action</th>
+                <th className="p-4">Details</th>
+              </tr>
+            </thead>
+            <tbody className="text-sm text-gray-700">
+              {auditLogs.length > 0 ? (
+                auditLogs.map((log) => (
+                  <tr key={log.id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="p-4 font-mono text-xs text-gray-500">{log.id}</td>
+                    <td className="p-4 font-mono text-xs">{new Date(log.timestamp).toLocaleString()}</td>
+                    <td className="p-4 font-medium">{log.user}</td>
+                    <td className="p-4 font-medium text-[#1A1D23]">{log.action}</td>
+                    <td className="p-4 text-gray-600">{log.details}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} className="p-8 text-center text-gray-500">
+                    No audit logs available.
                   </td>
                 </tr>
               )}

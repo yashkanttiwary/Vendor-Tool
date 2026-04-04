@@ -4,6 +4,7 @@ import { PipelineBar, PipelineState } from '../components/PipelineBar';
 import { mockRequest, formatCurrency } from '../data/mockData';
 import { sanitizeInput } from '../utils/sanitize';
 import { useLocalStorage } from '../utils/useLocalStorage';
+import { addAuditLog } from '../utils/auditLogger';
 
 export const Approval: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
   const [auditNote, setAuditNote] = useLocalStorage('auditNote', '');
@@ -11,6 +12,12 @@ export const Approval: React.FC<{ onNavigate: (screen: string) => void }> = ({ o
   const [confirmAction, setConfirmAction] = useState<'approve' | 'reject' | 'revise' | null>(null);
 
   const handleActionClick = (action: 'approve' | 'reject' | 'revise') => {
+    const userRole = window.localStorage.getItem('user_role') ? JSON.parse(window.localStorage.getItem('user_role')!) : 'Requester';
+    if (userRole !== 'Admin' && userRole !== 'Approver') {
+      alert("Error: Only Admins or Approvers can perform this action.");
+      return;
+    }
+
     if (action === 'approve' && !auditNote.trim()) {
       alert("Audit note is required for approval.");
       return;
@@ -25,9 +32,43 @@ export const Approval: React.FC<{ onNavigate: (screen: string) => void }> = ({ o
       // console.log("Approved with note:", sanitizedNote);
       setIsApproved(true);
       setAuditNote(''); // Clear note after successful approval
+
+      // Update request status in localStorage
+      try {
+        const storedCurrent = window.localStorage.getItem('genie-us-current-request');
+        if (storedCurrent) {
+          const currentReq = JSON.parse(storedCurrent);
+          const storedRequests = window.localStorage.getItem('genie-us-requests');
+          if (storedRequests) {
+            let requests = JSON.parse(storedRequests);
+            requests = requests.map((req: any) => 
+              req.id === currentReq.id ? { ...req, status: 'Done', updated: 'Just now' } : req
+            );
+            window.localStorage.setItem('genie-us-requests', JSON.stringify(requests));
+            addAuditLog('Request Approved', `Approved request ${currentReq.id} with note: ${sanitizedNote}`);
+          }
+        }
+      } catch (e) {
+        console.error("Error updating request status", e);
+      }
+
     } else if (confirmAction === 'reject') {
+      try {
+        const storedCurrent = window.localStorage.getItem('genie-us-current-request');
+        if (storedCurrent) {
+          const currentReq = JSON.parse(storedCurrent);
+          addAuditLog('Request Rejected', `Rejected request ${currentReq.id}`);
+        }
+      } catch (e) {}
       onNavigate('workspace');
     } else if (confirmAction === 'revise') {
+      try {
+        const storedCurrent = window.localStorage.getItem('genie-us-current-request');
+        if (storedCurrent) {
+          const currentReq = JSON.parse(storedCurrent);
+          addAuditLog('Request Revised', `Requested revision for ${currentReq.id}`);
+        }
+      } catch (e) {}
       onNavigate('recommendation');
     }
     setConfirmAction(null);
