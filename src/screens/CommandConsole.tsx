@@ -5,6 +5,7 @@ import { useLocalStorage } from '../utils/useLocalStorage';
 import { addAuditLog } from '../utils/auditLogger';
 import { buildExecutionBrief, generateCandidates, generateRecommendationTiers, parseMoney, parseQuantity } from '../utils/genieEngine';
 import { upsertRequestRecord } from '../utils/requestStore';
+import { getAuthSession } from '../utils/auth';
 
 export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
   const [input, setInput] = useState('');
@@ -34,7 +35,7 @@ export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> 
     "200-seat seminar in Jaipur, March 28, with AV and catering"
   ];
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setError('');
     
     // Basic validation
@@ -99,6 +100,31 @@ export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> 
       if (quantityMatch) extractedQuantity = `${quantityMatch[1]} ${quantityMatch[2]}`;
       
       extractedServices = sanitizedInput.length > 30 ? sanitizedInput.substring(0, 30) + '...' : sanitizedInput;
+    }
+
+    const session = getAuthSession();
+    if (sanitizedInput && session?.token) {
+      try {
+        const aiResponse = await fetch('/api/ai/parse', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-session-token': session.token,
+          },
+          body: JSON.stringify({ prompt: sanitizedInput }),
+        });
+        if (aiResponse.ok) {
+          const payload = await aiResponse.json();
+          const parsed = payload?.parsed || {};
+          extractedCity = parsed.city || extractedCity;
+          extractedBudget = parsed.budget || extractedBudget;
+          extractedTimeline = parsed.timeline || extractedTimeline;
+          extractedQuantity = parsed.quantity || extractedQuantity;
+          extractedServices = parsed.services || extractedServices;
+        }
+      } catch (e) {
+        console.warn('AI parse endpoint unavailable, using local parsing fallback.', e);
+      }
     }
 
     const newRequestId = `GU-${Date.now().toString().slice(-6)}`;

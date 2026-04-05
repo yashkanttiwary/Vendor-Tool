@@ -19,6 +19,22 @@ View your app in AI Studio: https://ai.studio/apps/89e48516-6acf-4e2c-ac3d-b3267
 3. Run the app:
    `npm run dev`
 
+4. Start backend (AI auth + parsing):
+   `npm run backend`
+5. In a second terminal run frontend:
+   `npm run dev`
+6. Open `http://localhost:3000/` and login with:
+   - Employee ID (format like `PW-1234`)
+   - AI API key
+
+## Security gating flow
+
+- The app is now login-gated and will not render internal screens without auth.
+- Login requires Employee ID + API key and requests a backend session token.
+- All AI parse requests are sent to backend with `x-session-token`.
+- Logout clears session and cached request data from browser storage.
+
+
 
 ## Localhost troubleshooting
 
