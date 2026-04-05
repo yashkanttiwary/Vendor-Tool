@@ -18,3 +18,18 @@ View your app in AI Studio: https://ai.studio/apps/89e48516-6acf-4e2c-ac3d-b3267
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+
+
+## Localhost troubleshooting
+
+After `npm run dev`, open **exactly**: `http://localhost:3000/` (note the `:3000` port).
+
+If you open only `http://localhost`, you'll get `ERR_CONNECTION_REFUSED` because this app does not run on port 80.
+
+Quick check:
+
+```bash
+curl -I http://127.0.0.1:3000
+```
+
+You should see `HTTP/1.1 200 OK`.
