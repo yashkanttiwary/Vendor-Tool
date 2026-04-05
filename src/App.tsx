@@ -36,7 +36,7 @@ export default function App() {
       <Sidebar activeScreen={currentScreen} setActiveScreen={handleNavigate} />
       <main className="flex-1 overflow-y-auto ml-60">
         <div className="px-6 py-3 border-b bg-white sticky top-0 z-10 flex justify-between items-center">
-          <span className="text-xs font-mono text-gray-500">Logged in as {session.employeeId}</span>
+          <span className="text-xs font-mono text-gray-500">Logged in as {session.employeeId} {String(session.token).startsWith('demo-') ? '(PW Demo Example)' : ''}</span>
           <button
             className="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50"
             onClick={() => {

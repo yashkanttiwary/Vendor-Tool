@@ -49,3 +49,9 @@ curl -I http://127.0.0.1:3000
 ```
 
 You should see `HTTP/1.1 200 OK`.
+
+
+### PW demo fallback
+
+If backend auth (`:8787`) is unavailable, login still allows **PW-style employee IDs** (`PW-1234`) in demo mode for example purposes.
+This keeps the UI testable now; production backend integration can be connected later.

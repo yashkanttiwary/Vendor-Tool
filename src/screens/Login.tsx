@@ -10,11 +10,13 @@ export const Login: React.FC<LoginProps> = ({ onAuthenticated }) => {
   const [employeeId, setEmployeeId] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setInfo('');
 
     if (!employeeId.trim() || !apiKey.trim()) {
       setError('Employee ID and API key are both required.');
@@ -42,7 +44,17 @@ export const Login: React.FC<LoginProps> = ({ onAuthenticated }) => {
       });
       onAuthenticated();
     } catch {
-      setError('Could not reach auth service. Ensure backend is running on port 8787.');
+      if (!/^PW[-_]?\d{3,}$/i.test(employeeId.trim())) {
+        setError('For now login is restricted to PW employee IDs (example flow).');
+      } else {
+        setAuthSession({
+          employeeId: employeeId.trim().toUpperCase(),
+          token: `demo-${Date.now()}`,
+          loginAt: new Date().toISOString(),
+        });
+        setInfo('Backend auth is unavailable, so demo login was used. This is for example purposes; backend will be connected later.');
+        onAuthenticated();
+      }
     } finally {
       setLoading(false);
     }
@@ -56,6 +68,7 @@ export const Login: React.FC<LoginProps> = ({ onAuthenticated }) => {
           <div>
             <h1 className="text-xl font-bold text-[#1A1D23]">GENIE-US Secure Login</h1>
             <p className="text-sm text-gray-500">Employee-gated access for internal sourcing workflows.</p>
+            <p className="text-xs text-amber-600 mt-1">Currently configured for PW employee IDs only (example flow).</p>
           </div>
         </div>
 
@@ -72,6 +85,7 @@ export const Login: React.FC<LoginProps> = ({ onAuthenticated }) => {
         </div>
 
         {error && <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-md p-2.5">{error}</div>}
+        {info && <div className="mb-4 text-sm text-blue-700 bg-blue-50 border border-blue-100 rounded-md p-2.5">{info}</div>}
 
         <button disabled={loading} className={`w-full py-2.5 rounded-md text-white font-medium ${loading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'}`}>
           {loading ? 'Authenticating...' : 'Login & Continue'}
