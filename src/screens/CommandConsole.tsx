@@ -3,6 +3,9 @@ import { Package, Users, Calendar, PenTool, MonitorPlay, Printer, UploadCloud, C
 import { sanitizeInput, isValidCity, isValidBudget, isValidTimeline } from '../utils/sanitize';
 import { useLocalStorage } from '../utils/useLocalStorage';
 import { addAuditLog } from '../utils/auditLogger';
+import { buildExecutionBrief, generateCandidates, generateRecommendationTiers, parseMoney, parseQuantity } from '../utils/genieEngine';
+import { upsertRequestRecord } from '../utils/requestStore';
+import { getAuthSession } from '../utils/auth';
 
 export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
   const [input, setInput] = useState('');
@@ -15,11 +18,7 @@ export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> 
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [requests, setRequests] = useLocalStorage('genie-us-requests', [
-    { id: 'GU-0142', category: 'Vendor Procurement', status: 'Negotiation', quote: 240000, updated: '2h ago', navigate: 'parsed' },
-    { id: 'GU-0139', category: 'Influencer Sourcing', status: 'Approval', quote: 180000, updated: '5h ago' },
-    { id: 'GU-0135', category: 'Event Sourcing', status: 'Done', quote: 520000, updated: '1d ago' },
-  ]);
+  const [requests, setRequests] = useLocalStorage('genie-us-requests', []);
 
   const categories = [
     { id: 'vendor', label: 'Vendor', icon: Package },
@@ -36,7 +35,7 @@ export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> 
     "200-seat seminar in Jaipur, March 28, with AV and catering"
   ];
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setError('');
     
     // Basic validation
@@ -103,29 +102,79 @@ export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> 
       extractedServices = sanitizedInput.length > 30 ? sanitizedInput.substring(0, 30) + '...' : sanitizedInput;
     }
 
-    const newRequestId = `GU-0${Math.floor(100 + Math.random() * 900)}`;
-    const newRequest = {
+    const session = getAuthSession();
+    if (sanitizedInput && session?.token) {
+      try {
+        const aiResponse = await fetch('/api/ai/parse', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-session-token': session.token,
+          },
+          body: JSON.stringify({ prompt: sanitizedInput }),
+        });
+        if (aiResponse.ok) {
+          const payload = await aiResponse.json();
+          const parsed = payload?.parsed || {};
+          extractedCity = parsed.city || extractedCity;
+          extractedBudget = parsed.budget || extractedBudget;
+          extractedTimeline = parsed.timeline || extractedTimeline;
+          extractedQuantity = parsed.quantity || extractedQuantity;
+          extractedServices = parsed.services || extractedServices;
+        }
+      } catch (e) {
+        console.warn('AI parse endpoint unavailable, using local parsing fallback.', e);
+      }
+    }
+
+    const newRequestId = `GU-${Date.now().toString().slice(-6)}`;
+    const normalizedBudget = parseMoney(extractedBudget || sanitizedBudget || 0);
+    const normalizedQuantity = parseQuantity(extractedQuantity);
+
+    const seededRequest = {
       id: newRequestId,
       category: sanitizedCategory || 'General Sourcing',
+      city: extractedCity || 'Unspecified',
+      budget: normalizedBudget,
+      timeline: extractedTimeline || 'Unspecified',
+      quantity: normalizedQuantity,
+      services: extractedServices,
       status: 'Parsed',
-      quote: extractedBudget ? parseFloat(extractedBudget.toString().replace(/[^0-9.-]+/g,"")) || 0 : 0,
-      updated: 'Just now',
+      quote: normalizedBudget,
+      updated: new Date().toISOString(),
       navigate: 'parsed'
     };
 
-    setRequests([newRequest, ...requests]);
+    const candidates = generateCandidates(seededRequest);
+    const recommendationTiers = generateRecommendationTiers(candidates, normalizedBudget);
+    const selectedVendorId = recommendationTiers[0]?.vendorId;
+    const selectedVendor = candidates.find((c) => c.id === selectedVendorId);
+
+    const currentRequest = {
+      ...seededRequest,
+      candidates,
+      recommendationTiers,
+      selectedVendorId,
+      negotiationTarget: selectedVendor ? Math.round(selectedVendor.quote * 0.92) : undefined,
+      brief: buildExecutionBrief({ ...seededRequest, candidates, recommendationTiers } as any, selectedVendor),
+      savings: selectedVendor ? Math.max(0, normalizedBudget - selectedVendor.quote) : 0,
+    };
+
+    const requestListItem = {
+      id: currentRequest.id,
+      category: currentRequest.category,
+      status: currentRequest.status,
+      quote: currentRequest.quote,
+      updated: currentRequest.updated,
+      navigate: currentRequest.navigate,
+      savings: currentRequest.savings,
+    };
+
+    setRequests([requestListItem, ...requests]);
     addAuditLog('Request Created', `Created request ${newRequestId} via Command Console`);
-    
-    // Store the current request details to be used in ParsedScope
-    window.localStorage.setItem('genie-us-current-request', JSON.stringify({
-      ...newRequest,
-      input: sanitizedInput,
-      city: extractedCity || 'Unspecified',
-      budget: extractedBudget || 'Unspecified',
-      timeline: extractedTimeline || 'Unspecified',
-      quantity: extractedQuantity,
-      services: extractedServices
-    }));
+
+    window.localStorage.setItem('genie-us-current-request', JSON.stringify(currentRequest));
+    upsertRequestRecord(currentRequest as any);
 
     onNavigate('parsed');
   };
