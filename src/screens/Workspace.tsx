@@ -3,26 +3,24 @@ import { TrendingUp, ArrowUpRight, CheckCircle2, Clock, X } from 'lucide-react';
 import { formatCurrency } from '../data/mockData';
 import { showToast } from '../components/Toast';
 import { useLocalStorage } from '../utils/useLocalStorage';
+import { getRequestRecord } from '../utils/requestStore';
 
 export const Workspace: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
   const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
 
-  const [requests, setRequests] = useLocalStorage('genie-us-requests', [
-    { id: 'GU-0142', category: 'Vendor Procurement', status: 'Negotiation', quote: 240000, updated: '2h ago', navigate: 'parsed' },
-    { id: 'GU-0139', category: 'Influencer Sourcing', status: 'Approval', quote: 180000, updated: '5h ago' },
-    { id: 'GU-0135', category: 'Event Sourcing', status: 'Done', quote: 520000, updated: '1d ago' },
-  ]);
+  const [requests, setRequests] = useLocalStorage('genie-us-requests', []);
 
-  const totalSavings = requests.reduce((acc: number, req: any) => acc + (req.quote ? req.quote * 0.15 : 0), 0);
+  const totalSavings = requests.reduce((acc: number, req: any) => acc + (req.savings || 0), 0);
   const approvalRate = requests.length > 0 ? Math.round((requests.filter((r: any) => r.status === 'Done' || r.status === 'Approval').length / requests.length) * 100) : 0;
   const avgCycleTime = requests.length > 0 ? (requests.length * 0.6).toFixed(1) : '0.0';
 
   const handleRequestClick = (request: any, navigateTo?: string) => {
-    window.localStorage.setItem('genie-us-current-request', JSON.stringify(request));
+    const fullRecord = getRequestRecord(request.id) || request;
+    window.localStorage.setItem('genie-us-current-request', JSON.stringify(fullRecord));
     if (navigateTo) {
       onNavigate(navigateTo);
     } else {
-      setSelectedRequest(request);
+      setSelectedRequest(fullRecord);
     }
   };
 
@@ -39,7 +37,7 @@ export const Workspace: React.FC<{ onNavigate: (screen: string) => void }> = ({ 
           <div className="flex items-end justify-between">
             <div className="text-3xl font-mono font-bold text-[#1A1D23]">{requests.length}</div>
             <div className="flex items-center text-green-600 text-sm font-medium">
-              <TrendingUp className="w-4 h-4 mr-1" /> +{requests.length > 3 ? requests.length - 3 : 0}
+              <TrendingUp className="w-4 h-4 mr-1" /> +{requests.length}
             </div>
           </div>
         </div>
@@ -47,7 +45,7 @@ export const Workspace: React.FC<{ onNavigate: (screen: string) => void }> = ({ 
         <div className="bg-white p-6 rounded-lg border border-gray-100 shadow-xs">
           <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Total Savings</div>
           <div className="flex items-end justify-between">
-            <div className="text-3xl font-mono font-bold text-[#1A1D23]">{formatCurrency(totalSavings || 420000)}</div>
+            <div className="text-3xl font-mono font-bold text-[#1A1D23]">{formatCurrency(totalSavings)}</div>
             <div className="flex items-center text-green-600 text-sm font-medium">
               <ArrowUpRight className="w-4 h-4 mr-1" /> 14%
             </div>
