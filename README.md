@@ -18,3 +18,51 @@ View your app in AI Studio: https://ai.studio/apps/89e48516-6acf-4e2c-ac3d-b3267
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+
+4. Start backend (AI auth + parsing):
+   `npm run backend`
+5. In a second terminal run frontend:
+   `npm run dev`
+6. Open `http://localhost:3000/` and login with:
+   - Employee ID (format like `PW-1234`)
+   - AI API key
+
+## Security gating flow
+
+- The app is now login-gated and will not render internal screens without auth.
+- Login requires Employee ID + API key and requests a backend session token.
+- All AI parse requests are sent to backend with `x-session-token`.
+- Logout clears session and cached request data from browser storage.
+
+
+
+## Localhost troubleshooting
+
+After `npm run dev`, open **exactly**: `http://localhost:3000/` (note the `:3000` port).
+
+If you open only `http://localhost`, you'll get `ERR_CONNECTION_REFUSED` because this app does not run on port 80.
+
+Quick check:
+
+```bash
+curl -I http://127.0.0.1:3000
+```
+
+You should see `HTTP/1.1 200 OK`.
+
+
+### PW demo fallback
+
+If backend auth (`:8787`) is unavailable, login still allows **PW-style employee IDs** (`PW-1234`) in demo mode for example purposes.
+This keeps the UI testable now; production backend integration can be connected later.
+
+
+## Backend AI endpoints (used by app)
+
+- `/api/ai/parse` -> scope extraction
+- `/api/ai/discovery` -> candidate generation
+- `/api/ai/recommend` -> recommendation tiers
+- `/api/ai/negotiate` -> negotiation target + message
+- `/api/ai/brief` -> execution brief draft
+
+When backend is unavailable, UI falls back to deterministic local logic so development can continue.

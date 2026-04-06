@@ -1,253 +1,95 @@
-import React, { useState, useEffect } from 'react';
-import { Filter, ArrowUpDown, ChevronRight, ArrowLeft, ArrowRight, ShieldAlert, ShieldCheck, Shield, Search } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Search, ArrowLeft, ArrowRight } from 'lucide-react';
 import { PipelineBar } from '../components/PipelineBar';
-import { mockRequest, mockCandidates, formatCurrency } from '../data/mockData';
-import { showToast } from '../components/Toast';
+import { formatCurrency, mockRequest } from '../data/mockData';
 import { CandidateDetail } from './CandidateDetail';
 import { addAuditLog } from '../utils/auditLogger';
+import { Candidate, generateRecommendationTiers } from '../utils/genieEngine';
+import { updateRequestState } from '../utils/requestManager';
+import { upsertRequestRecord } from '../utils/requestStore';
 
 export const Discovery: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
   const [currentRequest, setCurrentRequest] = useState<any>(mockRequest);
-  const [candidates, setCandidates] = useState(mockCandidates);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
-  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
 
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem('genie-us-current-request');
-      if (stored) {
-        setCurrentRequest({ ...mockRequest, ...JSON.parse(stored) });
-      }
-    } catch (e) {
-      console.error("Error parsing stored request", e);
+    const stored = window.localStorage.getItem('genie-us-current-request');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      setCurrentRequest({ ...mockRequest, ...parsed });
+      setCandidates(parsed.candidates || []);
     }
   }, []);
 
-  const handleShortlistToggle = (id: string) => {
-    setCandidates(candidates.map(c => {
-      if (c.id === id) {
-        const newShortlisted = !c.shortlisted;
-        addAuditLog(
-          newShortlisted ? 'Candidate Shortlisted' : 'Candidate Removed', 
-          `${newShortlisted ? 'Shortlisted' : 'Removed'} candidate ${c.name} for request ${currentRequest.id}`
-        );
-        return { ...c, shortlisted: newShortlisted };
-      }
-      return c;
-    }));
+  const filtered = useMemo(() => candidates.filter((c) => c.name.toLowerCase().includes(searchQuery.toLowerCase())), [candidates, searchQuery]);
+
+  const persist = (nextCandidates: Candidate[]) => {
+    const recommendationTiers = generateRecommendationTiers(nextCandidates, currentRequest.budget || 0);
+    const nextRequest = { ...currentRequest, candidates: nextCandidates, recommendationTiers };
+    setCurrentRequest(nextRequest);
+    window.localStorage.setItem('genie-us-current-request', JSON.stringify(nextRequest));
+    upsertRequestRecord(nextRequest as any);
   };
 
-  const getBenchmarkColor = (benchmark: string) => {
-    switch (benchmark) {
-      case 'low': return 'bg-green-500';
-      case 'mid': return 'bg-amber-500';
-      case 'high': return 'bg-red-500';
-      default: return 'bg-gray-500';
-    }
+  const toggleShortlist = (id: string) => {
+    const next = candidates.map((c) => (c.id === id ? { ...c, shortlisted: !c.shortlisted } : c));
+    setCandidates(next);
+    persist(next);
+    addAuditLog('Shortlist Updated', `Updated shortlist for ${currentRequest.id}`);
   };
 
-  const getRiskIcon = (risk: string) => {
-    switch (risk) {
-      case 'low': return <ShieldCheck className="w-4 h-4 text-green-500" />;
-      case 'medium': return <Shield className="w-4 h-4 text-amber-500" />;
-      case 'high': return <ShieldAlert className="w-4 h-4 text-red-500" />;
-      default: return null;
-    }
-  };
-
-  const handleSort = (key: string) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
-  };
-
-  const sortedCandidates = React.useMemo(() => {
-    let sortableCandidates = [...candidates];
-    if (sortConfig !== null) {
-      sortableCandidates.sort((a, b) => {
-        let aValue: any = a[sortConfig.key as keyof typeof a];
-        let bValue: any = b[sortConfig.key as keyof typeof b];
-        
-        if (aValue < bValue) {
-          return sortConfig.direction === 'asc' ? -1 : 1;
-        }
-        if (aValue > bValue) {
-          return sortConfig.direction === 'asc' ? 1 : -1;
-        }
-        return 0;
-      });
-    }
-    return sortableCandidates;
-  }, [candidates, sortConfig]);
-
-  const filteredCandidates = sortedCandidates.filter(candidate => 
-    candidate.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    candidate.source.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const handlePipelineNavigate = (state: string) => {
-    const stateToScreenMap: Record<string, string> = {
-      'parsed': 'parsed',
-      'discovering': 'discovery',
-      'shortlisted': 'discovery',
-      'negotiation_ready': 'negotiation',
-      'recommended': 'recommendation',
-      'awaiting_approval': 'approval',
-    };
-    if (stateToScreenMap[state]) {
-      onNavigate(stateToScreenMap[state]);
-    }
-  };
+  const selectedCandidate = candidates.find((c) => c.id === selectedCandidateId);
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-[#1A1D23]">Discovery & Shortlist</h1>
-          <p className="text-gray-500 mt-1 font-mono text-sm">Request #{mockRequest.id}</p>
-        </div>
-      </div>
+    <div className="p-6 max-w-6xl mx-auto">
+      <h1 className="text-2xl font-bold">Discovery & Shortlist</h1>
+      <p className="text-sm text-gray-500 font-mono">Request #{currentRequest.id}</p>
+      <PipelineBar currentState="shortlisted" onNavigate={() => {}} />
 
-      <PipelineBar currentState="shortlisted" onNavigate={handlePipelineNavigate} />
-
-      <div className="bg-white rounded-lg border border-gray-100 shadow-xs overflow-hidden mb-8">
-        <div className="px-6 py-4 border-b border-gray-100 bg-[#F1F3F5] flex justify-between items-center">
-          <div className="flex items-center text-sm font-medium text-gray-600">
-            <span className="text-[#1A1D23] font-bold mr-1">{filteredCandidates.length}</span> found
-            <span className="mx-2 text-gray-300">|</span>
-            <span className="text-blue-600 font-bold mr-1">{candidates.filter(c => c.shortlisted).length}</span> shortlisted
-          </div>
-          <div className="flex space-x-4 items-center">
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input 
-                type="text" 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search candidates..." 
-                className="pl-9 pr-4 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none w-48"
-              />
-            </div>
-            <button 
-              onClick={() => showToast('Filter options coming soon')}
-              className="flex items-center text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-1"
-            >
-              <Filter className="w-4 h-4 mr-1" /> Filter
-            </button>
-            <button 
-              onClick={() => handleSort('score')}
-              className="flex items-center text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-1"
-            >
-              <ArrowUpDown className="w-4 h-4 mr-1" /> Sort
-            </button>
+      <div className="bg-white border rounded-lg mt-6 overflow-hidden">
+        {!candidates.length && <div className="p-4 text-sm text-amber-700 bg-amber-50 border-b">No generated candidates found for this request yet. Go back and resubmit or edit scope.</div>}
+        <div className="p-4 border-b flex items-center justify-between">
+          <div>{filtered.length} found • {candidates.filter((c) => c.shortlisted).length} shortlisted</div>
+          <div className="relative">
+            <Search className="w-4 h-4 absolute top-2.5 left-2 text-gray-400" />
+            <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-8 pr-3 py-1.5 border rounded" placeholder="Search vendors" />
           </div>
         </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50/50 text-xs uppercase tracking-wider text-gray-500 font-medium">
-                <th className="px-6 py-3 w-12">#</th>
-                <th className="px-6 py-3 cursor-pointer hover:text-gray-700" onClick={() => handleSort('name')}>Name {sortConfig?.key === 'name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
-                <th className="px-6 py-3 cursor-pointer hover:text-gray-700" onClick={() => handleSort('score')}>Score {sortConfig?.key === 'score' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
-                <th className="px-6 py-3 cursor-pointer hover:text-gray-700" onClick={() => handleSort('quote')}>Quote {sortConfig?.key === 'quote' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
-                <th className="px-6 py-3 cursor-pointer hover:text-gray-700" onClick={() => handleSort('benchmark')}>Benchmark {sortConfig?.key === 'benchmark' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
-                <th className="px-6 py-3 cursor-pointer hover:text-gray-700" onClick={() => handleSort('risk')}>Risk {sortConfig?.key === 'risk' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
-                <th className="px-6 py-3 cursor-pointer hover:text-gray-700" onClick={() => handleSort('source')}>Source {sortConfig?.key === 'source' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
-                <th className="px-6 py-3 text-right">Shortlist</th>
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 text-left">
+            <tr><th className="p-3">Name</th><th>Score</th><th>Quote</th><th>Risk</th><th>Shortlist</th><th></th></tr>
+          </thead>
+          <tbody>
+            {filtered.map((c) => (
+              <tr key={c.id} className="border-t">
+                <td className="p-3">{c.name}<div className="text-xs text-gray-500">{c.source}</div></td>
+                <td>{c.score}</td><td>{formatCurrency(c.quote)}</td><td>{c.risk}</td>
+                <td><input type="checkbox" checked={c.shortlisted} onChange={() => toggleShortlist(c.id)} /></td>
+                <td><button onClick={() => setSelectedCandidateId(c.id)} className="text-blue-600">View</button></td>
               </tr>
-            </thead>
-            <tbody className="text-sm">
-              {filteredCandidates.length > 0 ? (
-                filteredCandidates.map((candidate, index) => (
-                  <tr 
-                    key={candidate.id}
-                    className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${candidate.shortlisted ? 'bg-blue-50/10' : ''}`}
-                  >
-                    <td className="px-6 py-4 font-mono text-gray-400 text-xs">{index + 1}</td>
-                    <td className="px-6 py-4">
-                      <div 
-                        className="font-medium text-[#1A1D23] flex items-center cursor-pointer hover:text-blue-600 transition-colors" 
-                        onClick={() => setSelectedCandidateId(candidate.id)}
-                      >
-                        {candidate.name} <ChevronRight className="w-4 h-4 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 font-mono font-bold text-[#1A1D23]">{candidate.score}</td>
-                    <td className="px-6 py-4 font-mono text-[#1A1D23]">{formatCurrency(candidate.quote)}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <div className={`w-2 h-2 rounded-full mr-2 ${getBenchmarkColor(candidate.benchmark)}`} />
-                        <span className="capitalize text-xs font-medium text-gray-600">{candidate.benchmark}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center" title={`${candidate.risk} risk`}>
-                        {getRiskIcon(candidate.risk)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
-                        {candidate.source}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input 
-                          type="checkbox" 
-                          className="sr-only peer" 
-                          checked={candidate.shortlisted}
-                          onChange={() => handleShortlistToggle(candidate.id)}
-                        />
-                        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                      </label>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
-                    No candidates found matching your search.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </div>
 
-      <div className="flex justify-between items-center pt-6 border-t border-gray-200">
-        <button 
-          onClick={() => onNavigate('parsed')}
-          className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 rounded"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" /> Back to Scope
-        </button>
-        <button 
+      <div className="flex justify-between mt-6">
+        <button className="flex items-center" onClick={() => onNavigate('parsed')}><ArrowLeft className="w-4 h-4 mr-1" />Back</button>
+        <button
+          disabled={!candidates.length}
+          className={`flex items-center px-4 py-2 rounded ${candidates.length ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
           onClick={() => {
-            import('../utils/requestManager').then(({ updateRequestState }) => {
-              updateRequestState(currentRequest.id, 'Negotiation', 'negotiation');
-              addAuditLog('Stage Advanced', `Advanced request ${currentRequest.id} to Negotiation`);
-              onNavigate('negotiation');
-            });
+            updateRequestState(currentRequest.id, 'Negotiation', 'negotiation');
+            const next = { ...currentRequest, status: 'Negotiation', navigate: 'negotiation', candidates };
+            window.localStorage.setItem('genie-us-current-request', JSON.stringify(next));
+            upsertRequestRecord(next as any);
+            onNavigate('negotiation');
           }}
-          disabled={candidates.filter(c => c.shortlisted).length === 0}
-          className={`flex items-center px-6 py-2.5 font-medium text-sm rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-            candidates.filter(c => c.shortlisted).length > 0
-              ? 'bg-blue-600 hover:bg-blue-700 text-white'
-              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-          }`}
-        >
-          Proceed to Negotiation <ArrowRight className="w-4 h-4 ml-2" />
-        </button>
+        >Continue<ArrowRight className="w-4 h-4 ml-1" /></button>
       </div>
-      
-      {selectedCandidateId && (
-        <CandidateDetail onClose={() => setSelectedCandidateId(null)} />
-      )}
+
+      {selectedCandidate && <CandidateDetail candidate={selectedCandidate} city={currentRequest.city} onClose={() => setSelectedCandidateId(null)} />}
     </div>
   );
 };
