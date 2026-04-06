@@ -25,3 +25,5 @@ export const aiDiscoverCandidates = (request: any) => callAi<{ candidates: any[]
 export const aiRecommend = (request: any, candidates: any[]) => callAi<{ recommendationTiers: any[] }>('/api/ai/recommend', { request, candidates });
 export const aiNegotiate = (request: any, candidate: any) => callAi<{ targetPrice?: number; message?: string }>('/api/ai/negotiate', { request, candidate });
 export const aiBrief = (request: any, selectedVendor: any) => callAi<{ briefText?: string }>('/api/ai/brief', { request, selectedVendor });
+
+export const aiResearch = (payload: { city: string; category: string; services?: string; quantity?: number; budget?: number }) => callAi<{ vendorResearch: any[] }>('/api/ai/research', payload);

@@ -122,6 +122,22 @@ app.post('/api/ai/brief', auth, async (req, res) => {
   }
 });
 
+
+app.post('/api/ai/research', auth, async (req, res) => {
+  const { city, category, services, quantity, budget } = req.body || {};
+  if (!city || !category) return res.status(400).json({ error: 'city and category are required' });
+  try {
+    const result = await runJsonGeneration(
+      req.session.apiKey,
+      'Generate vendorResearch array (5 items). Each item keys: name, source, reason, estimatedQuote(number). Use realistic Indian market providers when possible.',
+      { city, category, services, quantity, budget },
+    );
+    return res.json(result);
+  } catch (error) {
+    return res.status(500).json({ error: 'AI research failed', details: error instanceof Error ? error.message : 'Unknown error' });
+  }
+});
+
 app.listen(port, () => {
   console.log(`GENIE backend listening on http://localhost:${port}`);
 });

@@ -66,3 +66,12 @@ This keeps the UI testable now; production backend integration can be connected 
 - `/api/ai/brief` -> execution brief draft
 
 When backend is unavailable, UI falls back to deterministic local logic so development can continue.
+
+
+## Map + vendor research
+
+Discovery now supports `Run AI Vendor Research`, which calls backend AI and provides quick links for:
+- Google Maps search
+- IndiaMART search
+
+This helps move vendor-finding beyond static mock data.
