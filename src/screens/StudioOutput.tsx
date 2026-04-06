@@ -5,18 +5,29 @@ import { mockRequest } from '../data/mockData';
 import { addAuditLog } from '../utils/auditLogger';
 import { updateRequestState } from '../utils/requestManager';
 import { upsertRequestRecord } from '../utils/requestStore';
+import { aiBrief } from '../utils/aiClient';
 
 export const StudioOutput: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
   const [currentRequest, setCurrentRequest] = useState<any>(mockRequest);
   const [brief, setBrief] = useState('');
 
   useEffect(() => {
-    const stored = window.localStorage.getItem('genie-us-current-request');
-    if (stored) {
+    const bootstrap = async () => {
+      const stored = window.localStorage.getItem('genie-us-current-request');
+      if (!stored) return;
       const parsed = JSON.parse(stored);
-      setCurrentRequest({ ...mockRequest, ...parsed });
-      setBrief(parsed.brief || 'Execution brief is unavailable. Please return to Recommendation and generate again.');
-    }
+      const merged = { ...mockRequest, ...parsed };
+      if (!merged.brief && merged.selectedVendorId) {
+        const vendor = merged.candidates?.find((c: any) => c.id === merged.selectedVendorId);
+        if (vendor) {
+          const ai = await aiBrief(merged, vendor);
+          if (ai?.briefText) merged.brief = ai.briefText;
+        }
+      }
+      setCurrentRequest(merged);
+      setBrief(merged.brief || 'Execution brief is unavailable. Please return to Recommendation and generate again.');
+    };
+    bootstrap();
   }, []);
 
   return (

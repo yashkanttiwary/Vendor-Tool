@@ -55,3 +55,14 @@ You should see `HTTP/1.1 200 OK`.
 
 If backend auth (`:8787`) is unavailable, login still allows **PW-style employee IDs** (`PW-1234`) in demo mode for example purposes.
 This keeps the UI testable now; production backend integration can be connected later.
+
+
+## Backend AI endpoints (used by app)
+
+- `/api/ai/parse` -> scope extraction
+- `/api/ai/discovery` -> candidate generation
+- `/api/ai/recommend` -> recommendation tiers
+- `/api/ai/negotiate` -> negotiation target + message
+- `/api/ai/brief` -> execution brief draft
+
+When backend is unavailable, UI falls back to deterministic local logic so development can continue.

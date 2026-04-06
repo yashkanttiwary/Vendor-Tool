@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { PipelineBar } from '../components/PipelineBar';
 import { formatCurrency, mockRequest } from '../data/mockData';
 import { Candidate, RecommendationTier, buildExecutionBrief, generateRecommendationTiers } from '../utils/genieEngine';
+import { aiRecommend } from '../utils/aiClient';
 import { updateRequestState } from '../utils/requestManager';
 import { upsertRequestRecord } from '../utils/requestStore';
 
@@ -11,8 +12,20 @@ export const Recommendation: React.FC<{ onNavigate: (screen: string) => void }> 
   const [selectedTier, setSelectedTier] = useState<'Top Pick' | 'Best Value' | 'Budget Safe'>('Top Pick');
 
   useEffect(() => {
-    const stored = window.localStorage.getItem('genie-us-current-request');
-    if (stored) setCurrentRequest({ ...mockRequest, ...JSON.parse(stored) });
+    const bootstrap = async () => {
+      const stored = window.localStorage.getItem('genie-us-current-request');
+      if (!stored) return;
+      const parsed = { ...mockRequest, ...JSON.parse(stored) };
+      if (!parsed.recommendationTiers?.length && parsed.candidates?.length) {
+        const aiRec = await aiRecommend(parsed, parsed.candidates);
+        if (aiRec?.recommendationTiers?.length) {
+          parsed.recommendationTiers = aiRec.recommendationTiers;
+          window.localStorage.setItem('genie-us-current-request', JSON.stringify(parsed));
+        }
+      }
+      setCurrentRequest(parsed);
+    };
+    bootstrap();
   }, []);
 
   const tiers: RecommendationTier[] = currentRequest.recommendationTiers?.length ? currentRequest.recommendationTiers : generateRecommendationTiers(currentRequest.candidates || [], currentRequest.budget || 0);

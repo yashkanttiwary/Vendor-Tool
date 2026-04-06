@@ -16,6 +16,16 @@ app.use(express.json({ limit: '1mb' }));
 
 const sessions = new Map();
 
+const runJsonGeneration = async (apiKey, instruction, payload) => {
+  const client = new GoogleGenAI({ apiKey });
+  const out = await client.models.generateContent({
+    model: 'gemini-2.0-flash',
+    contents: `${instruction}\nReturn only valid JSON.\nInput:\n${JSON.stringify(payload)}`,
+    config: { responseMimeType: 'application/json' },
+  });
+  return JSON.parse(out.text || '{}');
+};
+
 app.post('/api/auth/login', (req, res) => {
   const { employeeId, apiKey } = req.body || {};
   if (!employeeId || !apiKey) {
@@ -26,20 +36,13 @@ app.post('/api/auth/login', (req, res) => {
   }
 
   const token = crypto.randomUUID();
-  sessions.set(token, {
-    employeeId: employeeId.toUpperCase(),
-    apiKey,
-    createdAt: Date.now(),
-  });
-
+  sessions.set(token, { employeeId: employeeId.toUpperCase(), apiKey, createdAt: Date.now() });
   return res.json({ token, employeeId: employeeId.toUpperCase() });
 });
 
 const auth = (req, res, next) => {
   const token = req.headers['x-session-token'];
-  if (!token || !sessions.has(token)) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  if (!token || !sessions.has(token)) return res.status(401).json({ error: 'Unauthorized' });
   req.session = sessions.get(token);
   next();
 };
@@ -47,21 +50,75 @@ const auth = (req, res, next) => {
 app.post('/api/ai/parse', auth, async (req, res) => {
   const { prompt } = req.body || {};
   if (!prompt) return res.status(400).json({ error: 'prompt is required' });
-
   try {
-    const client = new GoogleGenAI({ apiKey: req.session.apiKey });
-    const out = await client.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: `Extract JSON with keys category,city,budget,timeline,quantity,services from: ${prompt}`,
-      config: { responseMimeType: 'application/json' },
-    });
-    const parsed = JSON.parse(out.text || '{}');
+    const parsed = await runJsonGeneration(
+      req.session.apiKey,
+      'Extract sourcing fields with keys: category, city, budget, timeline, quantity, services.',
+      { prompt },
+    );
     return res.json({ parsed });
   } catch (error) {
-    return res.status(500).json({
-      error: 'AI parse failed',
-      details: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return res.status(500).json({ error: 'AI parse failed', details: error instanceof Error ? error.message : 'Unknown error' });
+  }
+});
+
+app.post('/api/ai/discovery', auth, async (req, res) => {
+  const { request } = req.body || {};
+  if (!request) return res.status(400).json({ error: 'request is required' });
+  try {
+    const result = await runJsonGeneration(
+      req.session.apiKey,
+      'Generate 6 candidate vendors with keys: candidates[].{name,quote,score,benchmark(low|mid|high),risk(low|medium|high),source,shortlisted,quality,reliability,riskScore,benchmarkMedian}. Ensure numeric fields are numbers.',
+      { request },
+    );
+    return res.json(result);
+  } catch (error) {
+    return res.status(500).json({ error: 'AI discovery failed', details: error instanceof Error ? error.message : 'Unknown error' });
+  }
+});
+
+app.post('/api/ai/recommend', auth, async (req, res) => {
+  const { request, candidates } = req.body || {};
+  if (!request || !candidates) return res.status(400).json({ error: 'request and candidates are required' });
+  try {
+    const result = await runJsonGeneration(
+      req.session.apiKey,
+      'Generate recommendationTiers array with 3 entries for Top Pick, Best Value, Budget Safe. Fields: tier,vendorId,score,quote,savings,confidence(High|Medium),explanation,explanationType(Rule-Based|AI-Assisted). vendorId must reference candidate name index style fallback if missing.',
+      { request, candidates },
+    );
+    return res.json(result);
+  } catch (error) {
+    return res.status(500).json({ error: 'AI recommendation failed', details: error instanceof Error ? error.message : 'Unknown error' });
+  }
+});
+
+app.post('/api/ai/negotiate', auth, async (req, res) => {
+  const { request, candidate } = req.body || {};
+  if (!request || !candidate) return res.status(400).json({ error: 'request and candidate are required' });
+  try {
+    const result = await runJsonGeneration(
+      req.session.apiKey,
+      'Generate negotiation object with keys: targetPrice(number) and message(string).',
+      { request, candidate },
+    );
+    return res.json(result);
+  } catch (error) {
+    return res.status(500).json({ error: 'AI negotiation failed', details: error instanceof Error ? error.message : 'Unknown error' });
+  }
+});
+
+app.post('/api/ai/brief', auth, async (req, res) => {
+  const { request, selectedVendor } = req.body || {};
+  if (!request || !selectedVendor) return res.status(400).json({ error: 'request and selectedVendor are required' });
+  try {
+    const result = await runJsonGeneration(
+      req.session.apiKey,
+      'Generate execution brief JSON with key briefText (string, multiline).',
+      { request, selectedVendor },
+    );
+    return res.json(result);
+  } catch (error) {
+    return res.status(500).json({ error: 'AI brief failed', details: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 

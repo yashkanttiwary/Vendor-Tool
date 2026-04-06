@@ -5,7 +5,7 @@ import { useLocalStorage } from '../utils/useLocalStorage';
 import { addAuditLog } from '../utils/auditLogger';
 import { buildExecutionBrief, generateCandidates, generateRecommendationTiers, parseMoney, parseQuantity } from '../utils/genieEngine';
 import { upsertRequestRecord } from '../utils/requestStore';
-import { getAuthSession } from '../utils/auth';
+import { aiDiscoverCandidates, aiParseScope, aiRecommend } from '../utils/aiClient';
 
 export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
   const [input, setInput] = useState('');
@@ -102,29 +102,14 @@ export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> 
       extractedServices = sanitizedInput.length > 30 ? sanitizedInput.substring(0, 30) + '...' : sanitizedInput;
     }
 
-    const session = getAuthSession();
-    if (sanitizedInput && session?.token) {
-      try {
-        const aiResponse = await fetch('/api/ai/parse', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-session-token': session.token,
-          },
-          body: JSON.stringify({ prompt: sanitizedInput }),
-        });
-        if (aiResponse.ok) {
-          const payload = await aiResponse.json();
-          const parsed = payload?.parsed || {};
-          extractedCity = parsed.city || extractedCity;
-          extractedBudget = parsed.budget || extractedBudget;
-          extractedTimeline = parsed.timeline || extractedTimeline;
-          extractedQuantity = parsed.quantity || extractedQuantity;
-          extractedServices = parsed.services || extractedServices;
-        }
-      } catch (e) {
-        console.warn('AI parse endpoint unavailable, using local parsing fallback.', e);
-      }
+    if (sanitizedInput) {
+      const parsedPayload = await aiParseScope(sanitizedInput);
+      const parsed = parsedPayload?.parsed || {};
+      extractedCity = parsed.city || extractedCity;
+      extractedBudget = parsed.budget || extractedBudget;
+      extractedTimeline = parsed.timeline || extractedTimeline;
+      extractedQuantity = parsed.quantity || extractedQuantity;
+      extractedServices = parsed.services || extractedServices;
     }
 
     const newRequestId = `GU-${Date.now().toString().slice(-6)}`;
@@ -145,8 +130,15 @@ export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> 
       navigate: 'parsed'
     };
 
-    const candidates = generateCandidates(seededRequest);
-    const recommendationTiers = generateRecommendationTiers(candidates, normalizedBudget);
+    const aiDiscovery = await aiDiscoverCandidates(seededRequest);
+    const candidates = (aiDiscovery?.candidates?.length ? aiDiscovery.candidates : generateCandidates(seededRequest)).map((c: any, idx: number) => ({
+      id: c.id || `${seededRequest.id}-v${idx + 1}`,
+      shortlisted: c.shortlisted ?? idx < 4,
+      ...c,
+    }));
+
+    const aiRecommendation = await aiRecommend(seededRequest, candidates);
+    const recommendationTiers = aiRecommendation?.recommendationTiers?.length ? aiRecommendation.recommendationTiers : generateRecommendationTiers(candidates, normalizedBudget);
     const selectedVendorId = recommendationTiers[0]?.vendorId;
     const selectedVendor = candidates.find((c) => c.id === selectedVendorId);
 

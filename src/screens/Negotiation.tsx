@@ -6,6 +6,7 @@ import { buildNegotiationMessage, Candidate } from '../utils/genieEngine';
 import { addAuditLog } from '../utils/auditLogger';
 import { updateRequestState } from '../utils/requestManager';
 import { upsertRequestRecord } from '../utils/requestStore';
+import { aiNegotiate } from '../utils/aiClient';
 
 export const Negotiation: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
   const [currentRequest, setCurrentRequest] = useState<any>(mockRequest);
@@ -26,7 +27,22 @@ export const Negotiation: React.FC<{ onNavigate: (screen: string) => void }> = (
   }, []);
 
   const vendor = useMemo(() => currentRequest.candidates?.find((c: Candidate) => c.id === selectedVendorId), [currentRequest, selectedVendorId]);
-  const message = vendor ? buildNegotiationMessage(vendor, target, currentRequest) : '';
+  const message = currentRequest.negotiationMessage || (vendor ? buildNegotiationMessage(vendor, target, currentRequest) : '');
+
+
+  useEffect(() => {
+    const enrichNegotiation = async () => {
+      if (!vendor) return;
+      const ai = await aiNegotiate(currentRequest, vendor);
+      if (ai?.targetPrice) setTarget(ai.targetPrice);
+      if (ai?.message) {
+        const next = { ...currentRequest, negotiationMessage: ai.message, negotiationTarget: ai.targetPrice || target };
+        setCurrentRequest(next);
+      }
+    };
+    enrichNegotiation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVendorId]);
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
