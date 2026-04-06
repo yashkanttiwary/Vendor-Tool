@@ -5,6 +5,7 @@ import { mockRequest, formatCurrency } from '../data/mockData';
 import { showToast } from '../components/Toast';
 import { addAuditLog } from '../utils/auditLogger';
 import { updateRequestState } from '../utils/requestManager';
+import { upsertRequestRecord } from '../utils/requestStore';
 
 export const ParsedScope: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
   const [currentRequest, setCurrentRequest] = useState<any>(mockRequest);
@@ -26,6 +27,12 @@ export const ParsedScope: React.FC<{ onNavigate: (screen: string) => void }> = (
           quantity: parsed.quantity || mockRequest.quantity,
           services: parsed.services || mockRequest.services,
         });
+        setAssumptions([
+          { id: 1, text: `Scope interpreted as ${parsed.services || mockRequest.services}`, confidence: 'HIGH' },
+          { id: 2, text: `Budget cap locked at ${typeof parsed.budget === 'number' ? formatCurrency(parsed.budget) : parsed.budget || 'Unspecified'}`, confidence: 'HIGH' },
+          { id: 3, text: `Delivery location confirmed for ${parsed.city || mockRequest.city}`, confidence: 'MEDIUM' },
+        ]);
+        setNeedsReview(parsed.city && parsed.budget ? [] : [{ id: 1, text: 'Please confirm missing city/budget details before discovery.' }]);
       }
     } catch (e) {
       console.error("Error parsing stored request", e);
@@ -257,6 +264,9 @@ export const ParsedScope: React.FC<{ onNavigate: (screen: string) => void }> = (
         <button 
           onClick={() => {
             updateRequestState(currentRequest.id, 'Discovery', 'discovery');
+            const next = { ...currentRequest, status: 'Discovery', navigate: 'discovery' };
+            window.localStorage.setItem('genie-us-current-request', JSON.stringify(next));
+            upsertRequestRecord(next as any);
             addAuditLog('Stage Advanced', `Advanced request ${currentRequest.id} to Discovery`);
             onNavigate('discovery');
           }}
