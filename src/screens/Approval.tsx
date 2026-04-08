@@ -1,284 +1,62 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Check, X, RotateCcw, ShieldCheck, TrendingDown, Clock, User } from 'lucide-react';
-import { PipelineBar, PipelineState } from '../components/PipelineBar';
-import { mockRequest, formatCurrency } from '../data/mockData';
-import { sanitizeInput } from '../utils/sanitize';
-import { useLocalStorage } from '../utils/useLocalStorage';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, Check } from 'lucide-react';
+import { PipelineBar } from '../components/PipelineBar';
+import { formatCurrency, mockRequest } from '../data/mockData';
 import { addAuditLog } from '../utils/auditLogger';
+import { updateRequestState } from '../utils/requestManager';
+import { upsertRequestRecord } from '../utils/requestStore';
+import { Candidate } from '../utils/genieEngine';
 
 export const Approval: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
   const [currentRequest, setCurrentRequest] = useState<any>(mockRequest);
-  const [auditNote, setAuditNote] = useLocalStorage('auditNote', '');
-  const [isApproved, setIsApproved] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<'approve' | 'reject' | 'revise' | null>(null);
+  const [auditNote, setAuditNote] = useState('');
+  const [done, setDone] = useState(false);
 
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem('genie-us-current-request');
-      if (stored) {
-        setCurrentRequest({ ...mockRequest, ...JSON.parse(stored) });
-      }
-    } catch (e) {
-      console.error("Error parsing stored request", e);
-    }
+    const stored = window.localStorage.getItem('genie-us-current-request');
+    if (stored) setCurrentRequest({ ...mockRequest, ...JSON.parse(stored) });
   }, []);
 
-  const handleActionClick = (action: 'approve' | 'reject' | 'revise') => {
-    const userRole = window.localStorage.getItem('user_role') ? JSON.parse(window.localStorage.getItem('user_role')!) : 'Requester';
-    if (userRole !== 'Admin' && userRole !== 'Approver') {
-      alert("Error: Only Admins or Approvers can perform this action.");
-      return;
-    }
+  const vendor: Candidate | undefined = useMemo(
+    () => currentRequest.candidates?.find((c: Candidate) => c.id === currentRequest.selectedVendorId),
+    [currentRequest],
+  );
 
-    if (action === 'approve' && !auditNote.trim()) {
-      alert("Audit note is required for approval.");
-      return;
-    }
-    setConfirmAction(action);
-  };
-
-  const executeAction = () => {
-    if (confirmAction === 'approve') {
-      const sanitizedNote = sanitizeInput(auditNote);
-      // In a real app, we would send sanitizedNote to the backend
-      // console.log("Approved with note:", sanitizedNote);
-      setIsApproved(true);
-      setAuditNote(''); // Clear note after successful approval
-
-      // Update request status in localStorage
-      try {
-        const storedCurrent = window.localStorage.getItem('genie-us-current-request');
-        if (storedCurrent) {
-          const currentReq = JSON.parse(storedCurrent);
-          import('../utils/requestManager').then(({ updateRequestState }) => {
-            updateRequestState(currentReq.id, 'Approved', 'workspace');
-            addAuditLog('Request Approved', `Approved request ${currentReq.id} with note: ${sanitizedNote}`);
-          });
-        }
-      } catch (e) {
-        console.error("Error updating request status", e);
-      }
-
-    } else if (confirmAction === 'reject') {
-      try {
-        const storedCurrent = window.localStorage.getItem('genie-us-current-request');
-        if (storedCurrent) {
-          const currentReq = JSON.parse(storedCurrent);
-          import('../utils/requestManager').then(({ updateRequestState }) => {
-            updateRequestState(currentReq.id, 'Rejected', 'workspace');
-            addAuditLog('Request Rejected', `Rejected request ${currentReq.id}`);
-          });
-        }
-      } catch (e) {}
-      onNavigate('workspace');
-    } else if (confirmAction === 'revise') {
-      try {
-        const storedCurrent = window.localStorage.getItem('genie-us-current-request');
-        if (storedCurrent) {
-          const currentReq = JSON.parse(storedCurrent);
-          import('../utils/requestManager').then(({ updateRequestState }) => {
-            updateRequestState(currentReq.id, 'Recommended', 'recommendation');
-            addAuditLog('Request Revised', `Requested revision for ${currentReq.id}`);
-          });
-        }
-      } catch (e) {}
-      onNavigate('recommendation');
-    }
-    setConfirmAction(null);
-  };
-
-  const handlePipelineNavigate = (state: PipelineState) => {
-    const stateToScreenMap: Record<string, string> = {
-      'parsed': 'parsed',
-      'discovering': 'discovery',
-      'negotiation_ready': 'negotiation',
-      'recommended': 'recommendation',
-      'awaiting_approval': 'approval',
-    };
-    if (stateToScreenMap[state]) {
-      onNavigate(stateToScreenMap[state]);
-    }
-  };
-
-  if (isApproved) {
-    return (
-      <div className="p-6 max-w-3xl mx-auto text-center mt-20">
-        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <Check className="w-10 h-10 text-green-600" />
-        </div>
-        <h1 className="text-3xl font-bold text-[#1A1D23] mb-4">Request Approved</h1>
-        <p className="text-gray-600 mb-8 text-lg">
-          Vendor B has been approved for {formatCurrency(240000)}. The execution brief has been sent to the operations team.
-        </p>
-        <button 
-          onClick={() => onNavigate('workspace')}
-          className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-        >
-          Return to Workspace
-        </button>
-      </div>
-    );
+  if (done) {
+    return <div className="p-10 text-center"><Check className="w-12 h-12 text-green-600 mx-auto mb-3" /><h2 className="text-2xl font-bold">Approved</h2><button className="mt-4 px-4 py-2 border rounded" onClick={() => onNavigate('workspace')}>Return to Workspace</button></div>;
   }
 
-  const handleBack = () => {
-    onNavigate('studio');
-  };
-
   return (
-    <div className="p-6 max-w-4xl mx-auto relative">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-[#1A1D23]">Approval Required</h1>
-          <p className="text-gray-500 mt-1 font-mono text-sm">Request #{currentRequest.id}</p>
-        </div>
+    <div className="p-6 max-w-4xl mx-auto">
+      <h1 className="text-2xl font-bold">Manager Approval</h1>
+      <PipelineBar currentState="awaiting_approval" onNavigate={() => {}} />
+
+      <div className="bg-white border rounded-lg p-5 mt-6 space-y-3">
+        <div>Request: <span className="font-mono">{currentRequest.id}</span></div>
+        <div>Selected Vendor: <strong>{vendor?.name || 'N/A'}</strong></div>
+        <div>Final Quote: <strong>{vendor ? formatCurrency(vendor.quote) : 'N/A'}</strong></div>
+        <div>Savings vs Budget: <strong>{formatCurrency(currentRequest.savings || 0)}</strong></div>
+        <textarea value={auditNote} onChange={(e) => setAuditNote(e.target.value)} placeholder="Audit note is mandatory" className="w-full min-h-[120px] border rounded p-3" />
       </div>
 
-      <PipelineBar currentState="awaiting_approval" onNavigate={handlePipelineNavigate} />
-
-      <div className="bg-white rounded-lg border border-gray-200 shadow-lg mb-8 overflow-hidden">
-        <div className="p-8 border-b border-gray-100">
-          <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-6">Final Recommendation Summary</h2>
-          
-          <div className="flex justify-between items-start mb-8">
-            <div>
-              <h3 className="text-2xl font-bold text-[#1A1D23] mb-2">Sharma Furniture Co.</h3>
-              <div className="flex items-center space-x-3">
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800">
-                  HIGH CONFIDENCE
-                </span>
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-200">
-                  <ShieldCheck className="w-3.5 h-3.5 mr-1" /> LOW RISK
-                </span>
-              </div>
-            </div>
-            
-            <div className="text-right">
-              <div className="text-3xl font-mono font-bold text-[#1A1D23]">{formatCurrency(240000)}</div>
-              <div className="text-sm font-medium text-green-600 flex items-center justify-end mt-1">
-                <TrendingDown className="w-4 h-4 mr-1" /> Savings: {formatCurrency(60000)}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-6 bg-[#F8F9FA] p-6 rounded-lg border border-gray-100">
-            <div>
-              <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Score</div>
-              <div className="text-xl font-mono font-bold text-[#1A1D23]">87/100</div>
-            </div>
-            <div>
-              <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Benchmark</div>
-              <div className="text-sm font-medium text-[#1A1D23] mt-1">At Mid (+4.3%)</div>
-            </div>
-            <div>
-              <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Category</div>
-              <div className="text-sm font-medium text-[#1A1D23] mt-1">Vendor Procurement</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-8 border-b border-gray-100 bg-[#F8F9FA]">
-          <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Evidence Snapshot</h2>
-          <ul className="space-y-3">
-            {[
-              "3 benchmark sources verified (IndiaMart, Google Maps, Internal DB)",
-              "Quote collected via WhatsApp on 2026-03-28",
-              "Negotiation reduced initial quote from ₹2.6L to ₹2.4L",
-              "2 alternative options evaluated (Regal Event Supplies, Delhi Chair Mart)",
-              "Vendor has 3 prior successful PW orders"
-            ].map((item, i) => (
-              <li key={i} className="flex items-start text-sm text-gray-700">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 mr-3 shrink-0"></span>
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="p-8 bg-white">
-          <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Audit Note <span className="text-red-500">*</span></h2>
-          <textarea
-            value={auditNote}
-            onChange={(e) => setAuditNote(e.target.value)}
-            placeholder="Add your review notes here. This will be permanently recorded in the audit trail..."
-            className="w-full min-h-[100px] p-4 bg-white border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors resize-y text-sm text-[#1A1D23] mb-8 outline-none"
-          />
-
-          <div className="grid grid-cols-3 gap-4">
-            <button 
-              onClick={() => handleActionClick('approve')}
-              className="flex items-center justify-center px-6 py-4 bg-[#22C55E] hover:bg-[#16A34A] text-white font-bold text-lg rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-            >
-              <Check className="w-6 h-6 mr-2" /> APPROVE
-            </button>
-            <button 
-              onClick={() => handleActionClick('reject')}
-              className="flex items-center justify-center px-6 py-4 bg-white border-2 border-red-500 text-red-600 hover:bg-red-50 font-bold text-lg rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-            >
-              <X className="w-6 h-6 mr-2" /> REJECT
-            </button>
-            <button 
-              onClick={() => handleActionClick('revise')}
-              className="flex items-center justify-center px-6 py-4 bg-white border-2 border-amber-500 text-amber-600 hover:bg-amber-50 font-bold text-lg rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
-            >
-              <RotateCcw className="w-6 h-6 mr-2" /> REVISE
-            </button>
-          </div>
-        </div>
-
-        <div className="px-8 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center text-xs text-gray-500 font-mono">
-          <div className="flex items-center">
-            <User className="w-4 h-4 mr-2" /> Approver: Amit Sharma (Finance Controller)
-          </div>
-          <div className="flex items-center">
-            <Clock className="w-4 h-4 mr-2" /> Timestamp: {new Date().toISOString()}
-          </div>
+      <div className="flex justify-between mt-6">
+        <button onClick={() => onNavigate('studio')} className="flex items-center"><ArrowLeft className="w-4 h-4 mr-1"/>Back</button>
+        <div className="space-x-2">
+          <button className="px-4 py-2 border rounded" onClick={() => { const next = { ...currentRequest, status: 'Revision Requested', navigate: 'recommendation' }; updateRequestState(currentRequest.id, 'Revision Requested', 'recommendation'); window.localStorage.setItem('genie-us-current-request', JSON.stringify(next)); upsertRequestRecord(next as any); onNavigate('recommendation'); }}>Request Revision</button>
+          <button
+            className="px-4 py-2 bg-green-600 text-white rounded"
+            onClick={() => {
+              if (!auditNote.trim()) return;
+              const next = { ...currentRequest, status: 'Done', navigate: 'workspace', approvedAt: new Date().toISOString(), auditNote };
+              updateRequestState(currentRequest.id, 'Done', 'workspace');
+              window.localStorage.setItem('genie-us-current-request', JSON.stringify(next));
+              upsertRequestRecord(next as any);
+              addAuditLog('Request Approved', `${currentRequest.id} approved with note: ${auditNote}`);
+              setDone(true);
+            }}
+          >Approve</button>
         </div>
       </div>
-
-      <div className="flex justify-start pt-2">
-        <button 
-          onClick={handleBack}
-          className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" /> Back to STUDIO Output
-        </button>
-      </div>
-
-      {/* Confirmation Modal */}
-      {confirmAction && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-200">
-            <h3 className="text-lg font-bold text-gray-900 mb-2">
-              {confirmAction === 'approve' ? 'Confirm Approval' : 
-               confirmAction === 'reject' ? 'Confirm Rejection' : 'Request Revision'}
-            </h3>
-            <p className="text-sm text-gray-500 mb-6">
-              {confirmAction === 'approve' ? 'Are you sure you want to approve this request and issue the Purchase Order? This action cannot be undone easily.' : 
-               confirmAction === 'reject' ? 'Are you sure you want to reject this request? The sourcing team will be notified.' : 
-               'Are you sure you want to request a revision? This will send the request back to the recommendation stage.'}
-            </p>
-            <div className="flex justify-end space-x-3">
-              <button 
-                onClick={() => setConfirmAction(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={executeAction}
-                className={`px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                  confirmAction === 'approve' ? 'bg-green-600 hover:bg-green-700 focus:ring-green-500' : 
-                  confirmAction === 'reject' ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' : 
-                  'bg-amber-500 hover:bg-amber-600 focus:ring-amber-500'
-                }`}
-              >
-                {confirmAction === 'approve' ? 'Yes, Approve' : 
-                 confirmAction === 'reject' ? 'Yes, Reject' : 'Yes, Request Revision'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
