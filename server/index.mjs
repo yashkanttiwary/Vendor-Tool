@@ -1,6 +1,10 @@
+import dotenv from 'dotenv';
 import express from 'express';
 import crypto from 'crypto';
 import { GoogleGenAI } from '@google/genai';
+
+dotenv.config({ path: '.env.local' });
+dotenv.config();
 
 const app = express();
 const port = process.env.GENIE_BACKEND_PORT || 8787;
@@ -28,15 +32,16 @@ const runJsonGeneration = async (apiKey, instruction, payload) => {
 
 app.post('/api/auth/login', (req, res) => {
   const { employeeId, apiKey } = req.body || {};
-  if (!employeeId || !apiKey) {
-    return res.status(400).json({ error: 'Employee ID and API key are required.' });
+  const resolvedApiKey = apiKey || process.env.GEMINI_API_KEY;
+  if (!employeeId || !resolvedApiKey) {
+    return res.status(400).json({ error: 'Employee ID is required and API key must be provided via login or GEMINI_API_KEY env.' });
   }
   if (!/^PW[-_]?\d{3,}$/i.test(employeeId)) {
     return res.status(400).json({ error: 'Employee ID must look like PW-1234.' });
   }
 
   const token = crypto.randomUUID();
-  sessions.set(token, { employeeId: employeeId.toUpperCase(), apiKey, createdAt: Date.now() });
+  sessions.set(token, { employeeId: employeeId.toUpperCase(), apiKey: resolvedApiKey, createdAt: Date.now() });
   return res.json({ token, employeeId: employeeId.toUpperCase() });
 });
 
