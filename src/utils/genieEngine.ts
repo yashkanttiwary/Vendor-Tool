@@ -65,8 +65,8 @@ export const parseMoney = (raw: string | number | undefined): number => {
   if (!raw) return 0;
   const normalized = String(raw).toLowerCase().replace(/,/g, '').trim();
   const base = parseFloat(normalized.replace(/[^0-9.]/g, '')) || 0;
-  if (normalized.includes('cr')) return base * 10000000;
-  if (normalized.includes('l')) return base * 100000;
+  if (normalized.includes('crore') || normalized.includes('cr')) return base * 10000000;
+  if (normalized.includes('lakh') || normalized.includes('lac') || normalized.includes('l')) return base * 100000;
   if (normalized.includes('k')) return base * 1000;
   return base;
 };

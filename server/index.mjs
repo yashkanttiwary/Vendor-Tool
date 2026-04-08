@@ -58,7 +58,7 @@ app.post('/api/ai/parse', auth, async (req, res) => {
   try {
     const parsed = await runJsonGeneration(
       req.session.apiKey,
-      'Extract sourcing fields with keys: category, city, budget, timeline, quantity, services.',
+      'Extract sourcing fields with keys: category, city, budget, timeline, quantity, services. Category must be one of Vendor Procurement, Influencer Sourcing, Event Sourcing, Freelancer Sourcing, Media Buying, Print Sourcing. Infer missing fields from natural language when possible (e.g., quantity from `500 chair`).',
       { prompt },
     );
     return res.json({ parsed });

@@ -96,21 +96,34 @@ export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> 
         if (timelineMatch) extractedTimeline = `${timelineMatch[1]} ${timelineMatch[2]}s`;
       }
       
-      const quantityMatch = sanitizedInput.match(/([0-9]+)\s*(chairs|units|people|influencers|seats)/i);
-      if (quantityMatch) extractedQuantity = `${quantityMatch[1]} ${quantityMatch[2]}`;
+      const quantityMatch = sanitizedInput.match(/([0-9]+)\s*(chair|chairs|unit|units|people|influencer|influencers|seat|seats)/i) || sanitizedInput.match(/(?:need|require|for)\s*([0-9]+)/i);
+      if (quantityMatch) extractedQuantity = quantityMatch[2] ? `${quantityMatch[1]} ${quantityMatch[2]}` : quantityMatch[1];
       
       extractedServices = sanitizedInput.length > 30 ? sanitizedInput.substring(0, 30) + '...' : sanitizedInput;
     }
 
+    let aiParsed: any = {};
     if (sanitizedInput) {
       const parsedPayload = await aiParseScope(sanitizedInput);
-      const parsed = parsedPayload?.parsed || {};
-      extractedCity = parsed.city || extractedCity;
-      extractedBudget = parsed.budget || extractedBudget;
-      extractedTimeline = parsed.timeline || extractedTimeline;
-      extractedQuantity = parsed.quantity || extractedQuantity;
-      extractedServices = parsed.services || extractedServices;
+      aiParsed = parsedPayload?.parsed || {};
+      extractedCity = aiParsed.city || extractedCity;
+      extractedBudget = aiParsed.budget || extractedBudget;
+      extractedTimeline = aiParsed.timeline || extractedTimeline;
+      extractedQuantity = aiParsed.quantity || extractedQuantity;
+      extractedServices = aiParsed.services || extractedServices;
     }
+
+
+    const inferredCategoryFromText = (() => {
+      const text = sanitizedInput.toLowerCase();
+      if (/(influencer|followers|instagram|creator)/.test(text)) return 'Influencer Sourcing';
+      if (/(event|venue|seminar|conference)/.test(text)) return 'Event Sourcing';
+      if (/(print|brochure|banner|hoarding)/.test(text)) return 'Print Sourcing';
+      if (/(media|ad|radio|tv|promotion)/.test(text)) return 'Media Buying';
+      if (/(freelancer|designer|editor|videographer)/.test(text)) return 'Freelancer Sourcing';
+      if (/(vendor|chairs|furniture|supply|procurement)/.test(text)) return 'Vendor Procurement';
+      return 'General Sourcing';
+    })();
 
     const newRequestId = `GU-${Date.now().toString().slice(-6)}`;
     const normalizedBudget = parseMoney(extractedBudget || sanitizedBudget || 0);
@@ -118,10 +131,10 @@ export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> 
 
     const seededRequest = {
       id: newRequestId,
-      category: sanitizedCategory || 'General Sourcing',
-      city: extractedCity || 'Unspecified',
+      category: sanitizedCategory || aiParsed.category || inferredCategoryFromText,
+      city: extractedCity || (sanitizedInput.match(/(?:in|at|for)\s+([A-Za-z ]{3,})/i)?.[1]?.trim()) || 'Unspecified',
       budget: normalizedBudget,
-      timeline: extractedTimeline || 'Unspecified',
+      timeline: extractedTimeline || (sanitizedInput.match(/by\s+([A-Za-z0-9 ,]+)/i)?.[1]?.trim()) || 'Unspecified',
       quantity: normalizedQuantity,
       services: extractedServices,
       status: 'Parsed',
