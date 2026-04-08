@@ -3,6 +3,9 @@ import { Package, Users, Calendar, PenTool, MonitorPlay, Printer, UploadCloud, C
 import { sanitizeInput, isValidCity, isValidBudget, isValidTimeline } from '../utils/sanitize';
 import { useLocalStorage } from '../utils/useLocalStorage';
 import { addAuditLog } from '../utils/auditLogger';
+import { buildExecutionBrief, generateCandidates, generateRecommendationTiers, parseMoney, parseQuantity } from '../utils/genieEngine';
+import { upsertRequestRecord } from '../utils/requestStore';
+import { aiDiscoverCandidates, aiParseScope, aiRecommend } from '../utils/aiClient';
 
 export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
   const [input, setInput] = useState('');
@@ -15,11 +18,7 @@ export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> 
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [requests, setRequests] = useLocalStorage('genie-us-requests', [
-    { id: 'GU-0142', category: 'Vendor Procurement', status: 'Negotiation', quote: 240000, updated: '2h ago', navigate: 'parsed' },
-    { id: 'GU-0139', category: 'Influencer Sourcing', status: 'Approval', quote: 180000, updated: '5h ago' },
-    { id: 'GU-0135', category: 'Event Sourcing', status: 'Done', quote: 520000, updated: '1d ago' },
-  ]);
+  const [requests, setRequests] = useLocalStorage('genie-us-requests', []);
 
   const categories = [
     { id: 'vendor', label: 'Vendor', icon: Package },
@@ -36,7 +35,7 @@ export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> 
     "200-seat seminar in Jaipur, March 28, with AV and catering"
   ];
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setError('');
     
     // Basic validation
@@ -97,35 +96,90 @@ export const CommandConsole: React.FC<{ onNavigate: (screen: string) => void }> 
         if (timelineMatch) extractedTimeline = `${timelineMatch[1]} ${timelineMatch[2]}s`;
       }
       
-      const quantityMatch = sanitizedInput.match(/([0-9]+)\s*(chairs|units|people|influencers|seats)/i);
-      if (quantityMatch) extractedQuantity = `${quantityMatch[1]} ${quantityMatch[2]}`;
+      const quantityMatch = sanitizedInput.match(/([0-9]+)\s*(chair|chairs|unit|units|people|influencer|influencers|seat|seats)/i) || sanitizedInput.match(/(?:need|require|for)\s*([0-9]+)/i);
+      if (quantityMatch) extractedQuantity = quantityMatch[2] ? `${quantityMatch[1]} ${quantityMatch[2]}` : quantityMatch[1];
       
       extractedServices = sanitizedInput.length > 30 ? sanitizedInput.substring(0, 30) + '...' : sanitizedInput;
     }
 
-    const newRequestId = `GU-0${Math.floor(100 + Math.random() * 900)}`;
-    const newRequest = {
+    let aiParsed: any = {};
+    if (sanitizedInput) {
+      const parsedPayload = await aiParseScope(sanitizedInput);
+      aiParsed = parsedPayload?.parsed || {};
+      extractedCity = aiParsed.city || extractedCity;
+      extractedBudget = aiParsed.budget || extractedBudget;
+      extractedTimeline = aiParsed.timeline || extractedTimeline;
+      extractedQuantity = aiParsed.quantity || extractedQuantity;
+      extractedServices = aiParsed.services || extractedServices;
+    }
+
+
+    const inferredCategoryFromText = (() => {
+      const text = sanitizedInput.toLowerCase();
+      if (/(influencer|followers|instagram|creator)/.test(text)) return 'Influencer Sourcing';
+      if (/(event|venue|seminar|conference)/.test(text)) return 'Event Sourcing';
+      if (/(print|brochure|banner|hoarding)/.test(text)) return 'Print Sourcing';
+      if (/(media|ad|radio|tv|promotion)/.test(text)) return 'Media Buying';
+      if (/(freelancer|designer|editor|videographer)/.test(text)) return 'Freelancer Sourcing';
+      if (/(vendor|chairs|furniture|supply|procurement)/.test(text)) return 'Vendor Procurement';
+      return 'General Sourcing';
+    })();
+
+    const newRequestId = `GU-${Date.now().toString().slice(-6)}`;
+    const normalizedBudget = parseMoney(extractedBudget || sanitizedBudget || 0);
+    const normalizedQuantity = parseQuantity(extractedQuantity);
+
+    const seededRequest = {
       id: newRequestId,
-      category: sanitizedCategory || 'General Sourcing',
+      category: sanitizedCategory || aiParsed.category || inferredCategoryFromText,
+      city: extractedCity || (sanitizedInput.match(/(?:in|at|for)\s+([A-Za-z ]{3,})/i)?.[1]?.trim()) || 'Unspecified',
+      budget: normalizedBudget,
+      timeline: extractedTimeline || (sanitizedInput.match(/by\s+([A-Za-z0-9 ,]+)/i)?.[1]?.trim()) || 'Unspecified',
+      quantity: normalizedQuantity,
+      services: extractedServices,
       status: 'Parsed',
-      quote: extractedBudget ? parseFloat(extractedBudget.toString().replace(/[^0-9.-]+/g,"")) || 0 : 0,
-      updated: 'Just now',
+      quote: normalizedBudget,
+      updated: new Date().toISOString(),
       navigate: 'parsed'
     };
 
-    setRequests([newRequest, ...requests]);
-    addAuditLog('Request Created', `Created request ${newRequestId} via Command Console`);
-    
-    // Store the current request details to be used in ParsedScope
-    window.localStorage.setItem('genie-us-current-request', JSON.stringify({
-      ...newRequest,
-      input: sanitizedInput,
-      city: extractedCity || 'Unspecified',
-      budget: extractedBudget || 'Unspecified',
-      timeline: extractedTimeline || 'Unspecified',
-      quantity: extractedQuantity,
-      services: extractedServices
+    const aiDiscovery = await aiDiscoverCandidates(seededRequest);
+    const candidates = (aiDiscovery?.candidates?.length ? aiDiscovery.candidates : generateCandidates(seededRequest)).map((c: any, idx: number) => ({
+      id: c.id || `${seededRequest.id}-v${idx + 1}`,
+      shortlisted: c.shortlisted ?? idx < 4,
+      ...c,
     }));
+
+    const aiRecommendation = await aiRecommend(seededRequest, candidates);
+    const recommendationTiers = aiRecommendation?.recommendationTiers?.length ? aiRecommendation.recommendationTiers : generateRecommendationTiers(candidates, normalizedBudget);
+    const selectedVendorId = recommendationTiers[0]?.vendorId;
+    const selectedVendor = candidates.find((c) => c.id === selectedVendorId);
+
+    const currentRequest = {
+      ...seededRequest,
+      candidates,
+      recommendationTiers,
+      selectedVendorId,
+      negotiationTarget: selectedVendor ? Math.round(selectedVendor.quote * 0.92) : undefined,
+      brief: buildExecutionBrief({ ...seededRequest, candidates, recommendationTiers } as any, selectedVendor),
+      savings: selectedVendor ? Math.max(0, normalizedBudget - selectedVendor.quote) : 0,
+    };
+
+    const requestListItem = {
+      id: currentRequest.id,
+      category: currentRequest.category,
+      status: currentRequest.status,
+      quote: currentRequest.quote,
+      updated: currentRequest.updated,
+      navigate: currentRequest.navigate,
+      savings: currentRequest.savings,
+    };
+
+    setRequests([requestListItem, ...requests]);
+    addAuditLog('Request Created', `Created request ${newRequestId} via Command Console`);
+
+    window.localStorage.setItem('genie-us-current-request', JSON.stringify(currentRequest));
+    upsertRequestRecord(currentRequest as any);
 
     onNavigate('parsed');
   };
