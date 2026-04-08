@@ -79,10 +79,14 @@ This helps move vendor-finding beyond static mock data.
 
 ## API key setup (secure)
 
-Set your key in runtime environment for backend:
+Set your key in runtime environment for backend (or place it in `.env.local`, which backend now auto-loads):
 
 ```bash
+# option A
 export GEMINI_API_KEY=your_key_here
+# option B
+echo 'GEMINI_API_KEY=your_key_here' > .env.local
+
 npm run backend
 ```
 

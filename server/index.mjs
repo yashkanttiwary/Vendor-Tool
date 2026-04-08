@@ -1,6 +1,10 @@
+import dotenv from 'dotenv';
 import express from 'express';
 import crypto from 'crypto';
 import { GoogleGenAI } from '@google/genai';
+
+dotenv.config({ path: '.env.local' });
+dotenv.config();
 
 const app = express();
 const port = process.env.GENIE_BACKEND_PORT || 8787;
